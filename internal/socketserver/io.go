@@ -2,21 +2,14 @@ package socketserver
 
 import (
 	"errors"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"strconv"
 )
 
-func toByteWithLengthPrefix(body string) []byte {
-	msg := fmt.Sprintf("%04d%s", len(body) + 4, body)
-	return []byte(msg)
-}
-
 func read(i io.Reader, size int) ([]byte, error) {
-	log.Infof("starting to received from socket")
 
-	msg := make([]byte, size)
+	msg := make([]byte, 0, size)
 	buf := make([]byte, size)
 	remainingBytesToRead := 0
 	bytesToReadInit := false
@@ -41,7 +34,9 @@ func read(i io.Reader, size int) ([]byte, error) {
 
 		remainingBytesToRead -= bytesRead
 
-		log.Infof("read %d bytes from socket with data %s, remaining %d", bytesRead, string(buf[:bytesRead]), remainingBytesToRead - bytesRead)
+		if remainingBytesToRead < 0 {
+			return nil, errors.New("invalid message was sent from client")
+		}
 
 		if remainingBytesToRead == 0 {
 			break
@@ -54,12 +49,32 @@ func read(i io.Reader, size int) ([]byte, error) {
 
 	log.Infof("received message from socket, msg: %s", msg)
 
-	len, err := strconv.Atoi(string(msg[:4]))
+	lStr := string(msg[:4])
+	l, err := strconv.Atoi(lStr)
 
 	if err != nil {
-		log.Fatalf("message length is invalid %d", len)
+		log.Fatalf("message length is invalid %s", lStr)
 		return nil, err
 	}
 
-	return msg[4:len], nil
+	return msg[4:l], nil
+}
+
+func write(i io.Writer, data []byte) error {
+
+	l := messageLengthPrefixFormatter(len(data))
+
+	_, err := i.Write(l)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = i.Write(data)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
