@@ -9,16 +9,16 @@ import (
 )
 
 type Server struct {
-	config SocketServerConfig
-	listener net.Listener
-	messageChan chan *clientMessage
-	clients []*SocketClient
+	config               SocketServerConfig
+	listener             net.Listener
+	messageChan          chan *clientMessage
+	clients              []*SocketClient
 	publishedMessageChan chan<- string
 }
 
-func  Init(config SocketServerConfig, publishMessageChan chan<- string) Server {
+func Init(config SocketServerConfig, publishMessageChan chan<- string) *Server {
 
-	s := Server{}
+	s := &Server{}
 
 	s.messageChan = make(chan *clientMessage, 1000)
 	s.clients = make([]*SocketClient, 0, 100)
@@ -27,11 +27,14 @@ func  Init(config SocketServerConfig, publishMessageChan chan<- string) Server {
 
 	go s.listen()
 
+	go s.listenToClientEvents()
+
 	return s
 }
 
+// this method will fireup the socket server
+// it will also accept connection
 func (s *Server) listen() {
-
 
 	address := fmt.Sprintf(":%d", s.config.ConnectionPort)
 
@@ -41,11 +44,9 @@ func (s *Server) listen() {
 		log.Fatalf("couldn't listen on specified port, err: %s", err)
 	}
 
-	log.Printf("started listening on port %d", s.config.ConnectionPort)
+	log.Infof("started listening on port %d", s.config.ConnectionPort)
 
 	defer ln.Close()
-
-	go s.listenToClientEvents()
 
 	for {
 
@@ -54,7 +55,7 @@ func (s *Server) listen() {
 		log.Infof("a socket connection was established from %s", c.RemoteAddr())
 
 		if err != nil {
-			log.Infof("error accored while accepting connection, err: %s", err)
+			log.Errorf("error while accepting connection, err: %s", err)
 			return
 		}
 
@@ -63,16 +64,15 @@ func (s *Server) listen() {
 
 }
 
+// this method will listen to event from socket clients
 func (s *Server) listenToClientEvents() {
 	msg := <-s.messageChan
 
 	switch msg.Type {
 	case clientMessageTypeDisconnect:
 		s.removeClient(msg.ClientId)
-		break
 	case clientMessageTypePublish:
 		s.publishedMessageChan <- msg.Payload
-		break
 	}
 }
 
@@ -83,7 +83,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	client := &SocketClient{
 		clientId:        clientId.String(),
 		connectionEpoch: time.Now().Unix(),
-		clientType:      ClientUndetermined,
+		clientType:      clientUndetermined,
 		isAuthenticated: false,
 		connection:      conn,
 		onMessageChan:   s.messageChan,
@@ -97,7 +97,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		config: s.config,
 	}
 
-	client.startAuthenticate(credStore)
+	client.initHandshake(credStore)
 
 }
 
@@ -116,6 +116,3 @@ func (s *Server) removeClient(clientId string) {
 	}
 
 }
-
-
-
