@@ -16,49 +16,67 @@ type SocketClient struct {
 }
 
 const (
-	ClientUndetermined = 0
-	ClientPublisher    = 1
-	ClientSubscriber   = 2
-	UnAuthenticated    = 0
-	Authenticated      = 1
+	clientUndetermined = 0
+	clientPublisher    = 1
+	clientSubscriber   = 2
 )
 
-func (c *SocketClient) startAuthenticate(store credentialStore) {
+// this method will read the handshake request from client
+// handshake is required to perform authentication
+func (c *SocketClient) initHandshake(store credentialStore) {
 
 	log.Infof("waiting for client with id: %s to authenticate", c.clientId)
 
-	msg, err := c.receive()
+	// read the first message from socket
+	// the first message will contain the handshake information
+	handshakeRequest, err := c.receive()
 
 	if err != nil {
 		c.close()
 		return
 	}
 
-	authResult := c.authenticateWithCredentials(store, msg)
-
-	if authResult {
-		c.isAuthenticated = true
-		c.sentAuthenticatedEvent()
-	} else {
+	// the handshake request must at least be 2 bytes
+	if len(handshakeRequest) <= 1 {
+		log.Errorf("handshake request was too small")
 		c.close()
 		return
 	}
 
-	typeResult := c.detectClientType(msg)
+	// split the handshake request
+	clientType := handshakeRequest[:1]
+	credential := handshakeRequest[1:]
 
-	if typeResult == 0 {
+	isAuthenticated := c.authenticate(store, credential)
+
+	if !isAuthenticated {
 		c.close()
 		return
 	}
 
+	typeResult, ok := c.parseClientType(clientType)
+
+	if !ok {
+		c.close()
+		return
+	}
+
+	// set authentication and client type
+	c.isAuthenticated = true
 	c.clientType = typeResult
 
-	c.startReceive()
+	err = c.send([]byte("1"))
+
+	if err != nil {
+		log.Errorf("could not sent authentication success event, error: %s", err)
+		c.close()
+		return
+	}
+
+	go c.startReceive()
 }
 
-func (c *SocketClient) authenticateWithCredentials(store credentialStore, request string) bool {
-
-	cred := request[1:]
+func (c *SocketClient) authenticate(store credentialStore, cred string) bool {
 
 	if store.isValid(cred) {
 		log.Infof("credential submitted: %s is valid", cred)
@@ -69,18 +87,18 @@ func (c *SocketClient) authenticateWithCredentials(store credentialStore, reques
 	}
 }
 
-func (c *SocketClient) detectClientType(request string) int {
-	ctype, _ := strconv.Atoi(request[:1])
+func (c *SocketClient) parseClientType(typeStr string) (int, bool) {
+	ctype, _ := strconv.Atoi(typeStr)
 
 	switch ctype {
-	case ClientPublisher:
-		return ctype
-	case ClientSubscriber:
-		return ctype
+	case clientPublisher:
+		return ctype, true
+	case clientSubscriber:
+		return ctype, true
 	}
 
-	log.Errorf("the client didn't provide a valid type, type: %s", request[:1])
-	return 0
+	log.Errorf("the client didn't provide a valid type, type: %s", typeStr)
+	return 0, false
 }
 
 func (c *SocketClient) startReceive() {
@@ -110,6 +128,6 @@ func (c *SocketClient) close() {
 	c.onMessageChan <- &clientMessage{ClientId: c.clientId, Type: clientMessageTypeDisconnect}
 }
 
-func (c *SocketClient) sentAuthenticatedEvent() {
-
+func (c *SocketClient) send(payload []byte) error {
+	return write(c.connection, payload)
 }
