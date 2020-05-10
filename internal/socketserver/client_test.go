@@ -7,7 +7,7 @@ import (
 
 func TestClientAuthenticateValid(t *testing.T) {
 	validCred := "Cred"
-	client := SocketClient{}
+	client := socketClient{}
 	store := credentialStore{
 		config: SocketServerConfig{
 			Credentials: []string{validCred},
@@ -27,7 +27,7 @@ func TestClientAuthenticateValid(t *testing.T) {
 func TestClientAuthenticateInvalid(t *testing.T) {
 	validCred := "Cred"
 	invalidCred := "DifferentCred"
-	client := SocketClient{}
+	client := socketClient{}
 	store := credentialStore{
 		config: SocketServerConfig{
 			Credentials: []string{validCred},
@@ -46,7 +46,7 @@ func TestClientAuthenticateInvalid(t *testing.T) {
 
 func TestClientTypeValid(t *testing.T) {
 	validType := clientPublisher
-	client := SocketClient{}
+	client := socketClient{}
 
 	input := fmt.Sprintf("%d", validType)
 
@@ -59,7 +59,7 @@ func TestClientTypeValid(t *testing.T) {
 
 func TestClientTypeInvalid(t *testing.T) {
 	validType := 5
-	client := SocketClient{}
+	client := socketClient{}
 
 	input := fmt.Sprintf("%d", validType)
 

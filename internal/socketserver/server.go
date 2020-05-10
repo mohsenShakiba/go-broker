@@ -11,8 +11,8 @@ import (
 type Server struct {
 	config               SocketServerConfig
 	listener             net.Listener
-	messageChan          chan *clientMessage
-	clients              []*SocketClient
+	messageChan          chan clientMessage
+	clients              []*socketClient
 	publishedMessageChan chan<- string
 }
 
@@ -20,8 +20,8 @@ func Init(config SocketServerConfig, publishMessageChan chan<- string) *Server {
 
 	s := &Server{}
 
-	s.messageChan = make(chan *clientMessage, 1000)
-	s.clients = make([]*SocketClient, 0, 100)
+	s.messageChan = make(chan clientMessage, 100)
+	s.clients = make([]*socketClient, 0, 100)
 	s.publishedMessageChan = publishMessageChan
 	s.config = config
 
@@ -64,26 +64,15 @@ func (s *Server) listen() {
 
 }
 
-// this method will listen to event from socket clients
-func (s *Server) listenToClientEvents() {
-	msg := <-s.messageChan
-
-	switch msg.Type {
-	case clientMessageTypeDisconnect:
-		s.removeClient(msg.ClientId)
-	case clientMessageTypePublish:
-		s.publishedMessageChan <- msg.Payload
-	}
-}
-
 func (s *Server) handleConnection(conn net.Conn) {
 
 	clientId := uuid.New()
 
-	client := &SocketClient{
+	client := &socketClient{
 		clientId:        clientId.String(),
 		connectionEpoch: time.Now().Unix(),
 		clientType:      clientUndetermined,
+		isClosed:        false,
 		isAuthenticated: false,
 		connection:      conn,
 		onMessageChan:   s.messageChan,
@@ -93,26 +82,75 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	s.clients = append(s.clients, client)
 
-	credStore := credentialStore{
-		config: s.config,
-	}
-
-	client.initHandshake(credStore)
+	client.startReceive()
 
 }
 
-func (s *Server) removeClient(clientId string) {
-	index := -1
+// this method will listen to event from socket clients
+func (s *Server) listenToClientEvents() {
+	clientMsg := <-s.messageChan
 
-	for i, c := range s.clients {
-		if c.clientId == clientId {
-			index = i
+	// get client
+	client := s.findClientById(clientMsg.clientId)
+
+	if client == nil {
+		log.Errorf("a message was published from unknown client with id: %s", clientMsg.clientId)
+	}
+
+	// parse the message
+	parsedMsg := parseMessage(clientMsg.payload)
+
+	// detect the type of message
+	switch v := parsedMsg.(type) {
+	case authenticateMessage:
+		// authenticate the client
+		break
+	case routedMessage:
+		break
+	case subscribeMessage:
+		break
+	case ackMessage:
+		break
+	case nackMessage:
+		break
+	}
+
+}
+
+func (s *Server) findClientById(id string) *socketClient {
+	for _, c := range s.clients {
+		if c.clientId == id {
+			return c
+		}
+	}
+	return nil
+}
+
+func (s *Server) authenticateClient(client *socketClient, msg authenticateMessage) {
+
+	if client.isAuthenticated {
+		log.Warnf("the client %s has already been authenticated, ignoring")
+		return
+	}
+
+	cred := fmt.Sprintf("%s:%s", msg.userName, msg.password)
+
+	for _, validCred := range s.config.Credentials {
+		if cred == validCred {
+			// set a authenticated
+			client.setAsAuthenticated()
+
+			// send authentication event
+			recEv := receiveMessage{
+				id: msg.id,
+			}
+
+			// send event
+			client.send(recEv.format())
 		}
 	}
 
-	if index != -1 {
-		s.clients[index] = s.clients[len(s.clients)-1]
-		s.clients = s.clients[:len(s.clients)-1]
-	}
+	// close the client
+	client.close()
 
 }

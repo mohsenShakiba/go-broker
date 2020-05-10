@@ -1,6 +1,8 @@
 package socketserver
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	messageLengthSize   = 4
@@ -11,4 +13,17 @@ const (
 func messageLengthPrefixFormatter(len int) []byte {
 	length := fmt.Sprintf(messageLengthFormat, len+messageLengthSize)
 	return []byte(length)
+}
+
+func format(parts ...[]byte) []byte {
+	msg := make([]byte, 0, 1000)
+
+	for _, p := range parts {
+		msg = append(msg, p...)
+		msg = append(msg, []byte("\n")...)
+	}
+
+	msg = append(messageLengthPrefixFormatter(len(msg)), msg...)
+
+	return msg
 }
