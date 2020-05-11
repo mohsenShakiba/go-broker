@@ -1,71 +1,62 @@
 package socketserver
 
 import (
-	"fmt"
+	"go-broker/internal/socketserver/internal/mock"
 	"testing"
 )
 
-func TestClientAuthenticateValid(t *testing.T) {
-	validCred := "Cred"
-	client := socketClient{}
-	store := credentialStore{
-		config: SocketServerConfig{
-			Credentials: []string{validCred},
-		},
+func TestReceiveOpen(t *testing.T) {
+
+	ch := make(chan clientMessage, 10)
+
+	m := mock.NewMockSocket()
+
+	client := socketClient{
+		clientId:        "TEST",
+		isAuthenticated: false,
+		clientType:      0,
+		isClosed:        false,
+		connection:      m,
+		onMessageChan:   ch,
 	}
 
-	validCredWithType := fmt.Sprintf("%d%s", clientPublisher, validCred)
+	msg := "TEST"
+	input := formatStr(msg)
 
-	authSuccess := client.authenticate(store, validCredWithType)
+	_, _ = m.Write(input)
 
-	if !authSuccess {
-		t.Fatal("client authentication must succeed")
-	}
+	go client.startReceive()
 
-}
+	res := <-ch
 
-func TestClientAuthenticateInvalid(t *testing.T) {
-	validCred := "Cred"
-	invalidCred := "DifferentCred"
-	client := socketClient{}
-	store := credentialStore{
-		config: SocketServerConfig{
-			Credentials: []string{validCred},
-		},
-	}
-
-	invalidCredWithType := fmt.Sprintf("%d%s", clientPublisher, invalidCred)
-
-	authSuccess := client.authenticate(store, invalidCredWithType)
-
-	if authSuccess {
-		t.Fatal("client authentication must fail")
+	if string(res.payload) != msg {
+		t.Fatalf("the input and output of socket mock didn't match input: %s, output: %s", msg, string(res.payload))
 	}
 
 }
 
-func TestClientTypeValid(t *testing.T) {
-	validType := clientPublisher
-	client := socketClient{}
+func TestSend(t *testing.T) {
 
-	input := fmt.Sprintf("%d", validType)
+	m := mock.NewMockSocket()
 
-	ctype, _ := client.parseClientType(input)
-
-	if ctype != validType {
-		t.Fatalf("invalid output while detecting client type, input:%d, output:%d", validType, ctype)
+	client := socketClient{
+		clientId:        "TEST",
+		isAuthenticated: false,
+		clientType:      0,
+		isClosed:        false,
+		connection:      m,
+		onMessageChan:   nil,
 	}
-}
 
-func TestClientTypeInvalid(t *testing.T) {
-	validType := 5
-	client := socketClient{}
+	msg := "TEST"
+	input := formatStr(msg)
+	_ = client.send(input)
 
-	input := fmt.Sprintf("%d", validType)
+	b := make([]byte, 8)
+	_, _ = m.Read(b)
 
-	_, ok := client.parseClientType(input)
-
-	if ok {
-		t.Fatalf("the client type must detect and error, input:%d", validType)
+	if string(b) != string(input) {
+		t.Fatalf("the input and output of socket mock didn't match input: %s, output: %s", string(b), string(input))
 	}
+
 }

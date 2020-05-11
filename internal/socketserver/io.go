@@ -59,22 +59,3 @@ func read(i io.Reader, size int) ([]byte, error) {
 
 	return msg[4:l], nil
 }
-
-func write(i io.Writer, data []byte) error {
-
-	l := messageLengthPrefixFormatter(len(data))
-
-	_, err := i.Write(l)
-
-	if err != nil {
-		return err
-	}
-
-	_, err = i.Write(data)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}

@@ -6,24 +6,33 @@ import (
 
 const (
 	messageLengthSize   = 4
-	messageLengthFormat = "%04d"
+	messageLengthFormat = "%04d\n"
 )
 
-// this message will convert the message body into []byte
-func messageLengthPrefixFormatter(len int) []byte {
-	length := fmt.Sprintf(messageLengthFormat, len+messageLengthSize)
-	return []byte(length)
+func formatStr(part string) []byte {
+	return format([]byte(part))
 }
 
 func format(parts ...[]byte) []byte {
-	msg := make([]byte, 0, 1000)
+	msg := make([]byte, 0, 1024)
 
-	for _, p := range parts {
+	for i, p := range parts {
 		msg = append(msg, p...)
-		msg = append(msg, []byte("\n")...)
+		if i < len(parts)-1 {
+			msg = append(msg, []byte("\n")...)
+		}
 	}
 
-	msg = append(messageLengthPrefixFormatter(len(msg)), msg...)
+	return msg
+}
+
+func formatWithLengthPrefix(parts ...[]byte) []byte {
+
+	msg := format(parts...)
+
+	prefix := []byte(fmt.Sprintf(messageLengthFormat, len(msg)+1+messageLengthSize))
+
+	msg = append(prefix, msg...)
 
 	return msg
 }

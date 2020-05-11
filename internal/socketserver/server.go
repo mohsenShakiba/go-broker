@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net"
-	"time"
 )
 
 type Server struct {
@@ -70,7 +69,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	client := &socketClient{
 		clientId:        clientId.String(),
-		connectionEpoch: time.Now().Unix(),
 		clientType:      clientUndetermined,
 		isClosed:        false,
 		isAuthenticated: false,
@@ -103,15 +101,19 @@ func (s *Server) listenToClientEvents() {
 	// detect the type of message
 	switch v := parsedMsg.(type) {
 	case authenticateMessage:
-		// authenticate the client
+		s.authenticateClient(client, v)
 		break
 	case routedMessage:
+		s.processRoutedMessage(client, v)
 		break
 	case subscribeMessage:
+		s.processSubscribeMessage(client, v)
 		break
 	case ackMessage:
+		s.processAckMessage(client, v)
 		break
 	case nackMessage:
+		s.processNackMessage(client, v)
 		break
 	}
 
@@ -129,7 +131,7 @@ func (s *Server) findClientById(id string) *socketClient {
 func (s *Server) authenticateClient(client *socketClient, msg authenticateMessage) {
 
 	if client.isAuthenticated {
-		log.Warnf("the client %s has already been authenticated, ignoring")
+		log.Warnf("the client %s has already been authenticated, ignoring", client.clientId)
 		return
 	}
 
@@ -152,5 +154,57 @@ func (s *Server) authenticateClient(client *socketClient, msg authenticateMessag
 
 	// close the client
 	client.close()
+
+}
+
+func (s *Server) processRoutedMessage(client *socketClient, msg routedMessage) {
+
+	// check if client is authenticated
+	if !client.isAuthenticated {
+		log.Warnf("the client %s isn't authenticated to send routed messages, ignoring", client.clientId)
+		return
+	}
+
+	// send message to manager
+
+}
+
+func (s *Server) processSubscribeMessage(client *socketClient, msg subscribeMessage) {
+
+	// check if client is authenticated
+	if !client.isAuthenticated {
+		log.Warnf("the client %s isn't authenticated for subscription, ignoring", client.clientId)
+		return
+	}
+
+	client.clientType = clientSubscriber
+
+	log.Infof("the client %s was registered as subscriber", client.clientId)
+
+	// send subscription config to sender
+
+}
+
+func (s *Server) processAckMessage(client *socketClient, msg ackMessage) {
+
+	// check if client is authenticated
+	if !client.isAuthenticated {
+		log.Warnf("the client %s isn't authenticated for ack, ignoring", client.clientId)
+		return
+	}
+
+	// send ack to manager
+
+}
+
+func (s *Server) processNackMessage(client *socketClient, msg nackMessage) {
+
+	// check if client is authenticated
+	if !client.isAuthenticated {
+		log.Warnf("the client %s isn't authenticated for nack, ignoring", client.clientId)
+		return
+	}
+
+	// send nack to manager
 
 }
