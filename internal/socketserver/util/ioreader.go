@@ -1,4 +1,4 @@
-package socketserver
+package util
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func read(i io.Reader, size int) ([]byte, error) {
+func Read(i io.Reader, size int) ([]byte, error) {
 
 	msg := make([]byte, 0, size)
 	buf := make([]byte, size)
@@ -44,7 +44,7 @@ func read(i io.Reader, size int) ([]byte, error) {
 	}
 
 	if !bytesToReadInit {
-		return nil, errors.New("couldn't read due to invalid message format")
+		return nil, errors.New("couldn't Read due to invalid message format")
 	}
 
 	log.Infof("received message from socket, msg: %s", msg)

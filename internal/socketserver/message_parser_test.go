@@ -1,25 +1,40 @@
 package socketserver
 
 import (
-	"encoding/binary"
+	"bytes"
+	"go-broker/internal/socketserver/serializer"
 	"strings"
 	"testing"
 )
 
 func TestAuthMessage(t *testing.T) {
 	inMsg := authenticateMessage{
-		id:       "TEST",
-		userName: "USER",
-		password: "PASS",
+		Id:       "TEST",
+		UserName: "USER",
+		Password: "PASS",
 	}
 
-	b := format([]byte(authenticateMessageType), []byte(inMsg.id), []byte(inMsg.userName), []byte(inMsg.password))
+	s := serializer.NewJsonSerializer()
 
-	outMsg := parseMessage(b)
+	b, err := s.Serialize(&inMsg)
+
+	if err != nil {
+		t.Fatalf("serialization failed with error %s", err)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.Write([]byte(authenticateMessageType))
+	buf.Write(b)
+
+	outMsg, err := parseMessage(buf.Bytes())
+
+	if err != nil {
+		t.Fatalf("failed to parse message, error: %s", err)
+	}
 
 	switch msg := outMsg.(type) {
-	case authenticateMessage:
-		if msg.userName != inMsg.userName || msg.password != inMsg.password || msg.id != inMsg.id {
+	case *authenticateMessage:
+		if msg.UserName != inMsg.UserName || msg.Password != inMsg.Password || msg.Id != inMsg.Id {
 			t.Fatalf("the output properties deosn't match that of input")
 		}
 	default:
@@ -30,18 +45,32 @@ func TestAuthMessage(t *testing.T) {
 
 func TestRoutedMessage(t *testing.T) {
 	inMsg := routedMessage{
-		id:      "TEST",
-		payload: []byte("USER"),
-		routes:  []string{"ROUTE1", "ROUTE2"},
+		Id:      "TEST",
+		Payload: []byte("USER"),
+		Routes:  []string{"ROUTE1", "ROUTE2"},
 	}
 
-	b := format([]byte(routedMessageType), []byte(inMsg.id), []byte(strings.Join(inMsg.routes, ",")), inMsg.payload)
+	s := serializer.NewJsonSerializer()
 
-	outMsg := parseMessage(b)
+	b, err := s.Serialize(&inMsg)
+
+	if err != nil {
+		t.Fatalf("serialization failed with error %s", err)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.Write([]byte(routedMessageType))
+	buf.Write(b)
+
+	outMsg, err := parseMessage(buf.Bytes())
+
+	if err != nil {
+		t.Fatalf("failed to parse message, error: %s", err)
+	}
 
 	switch msg := outMsg.(type) {
-	case routedMessage:
-		if string(msg.payload) != string(inMsg.payload) || strings.Join(msg.routes, ",") != strings.Join(inMsg.routes, ",") || msg.id != inMsg.id {
+	case *routedMessage:
+		if string(msg.Payload) != string(inMsg.Payload) || strings.Join(msg.Routes, ",") != strings.Join(inMsg.Routes, ",") || msg.Id != inMsg.Id {
 			t.Fatalf("the output properties deosn't match that of input")
 		}
 	default:
@@ -53,18 +82,32 @@ func TestRoutedMessage(t *testing.T) {
 // test subscribe message
 func TestSubscribeMessage(t *testing.T) {
 	inMsg := subscribeMessage{
-		id:      "TEST",
-		routes:  []string{"ROUTE1", "ROUTE2"},
-		bufSize: 10,
+		Id:      "TEST",
+		Routes:  []string{"ROUTE1", "ROUTE2"},
+		BufSize: 10,
 	}
 
-	b := format([]byte(routedMessageType), []byte(inMsg.id), []byte(strings.Join(inMsg.routes, ",")))
+	s := serializer.NewJsonSerializer()
 
-	outMsg := parseMessage(b)
+	b, err := s.Serialize(inMsg)
+
+	if err != nil {
+		t.Fatalf("serialization failed with error %s", err)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.Write([]byte(subscribeMessageType))
+	buf.Write(b)
+
+	outMsg, err := parseMessage(buf.Bytes())
+
+	if err != nil {
+		t.Fatalf("failed to parse message, error: %s", err)
+	}
 
 	switch msg := outMsg.(type) {
-	case routedMessage:
-		if string(msg.payload) != string(inMsg.payload) || strings.Join(msg.routes, ",") != strings.Join(inMsg.routes, ",") || msg.id != inMsg.id {
+	case *subscribeMessage:
+		if msg.BufSize != inMsg.BufSize || strings.Join(msg.Routes, ",") != strings.Join(inMsg.Routes, ",") || msg.Id != inMsg.Id {
 			t.Fatalf("the output properties deosn't match that of input")
 		}
 	default:

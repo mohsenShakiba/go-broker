@@ -1,15 +1,21 @@
-package socketserver
+package util
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
+func formatter(s string) []byte {
+	prefix := []byte(fmt.Sprintf("%04d", len(s)+4))
+	return append(prefix, []byte(s)...)
+}
+
 func TestReadSmall(t *testing.T) {
 	msg := "THIS IS A TEST"
-	payload := formatStr(msg)
+	payload := formatter(msg)
 	r := bytes.NewReader(payload)
-	result, err := read(r, 100)
+	result, err := Read(r, 100)
 
 	if err != nil {
 		t.Fatalf("error in reading, input: %s, error: %s", msg, err)
@@ -22,9 +28,9 @@ func TestReadSmall(t *testing.T) {
 
 func TestReadLarge(t *testing.T) {
 	msg := "THIS IS A TEST"
-	payload := formatStr(msg)
+	payload := formatter(msg)
 	r := bytes.NewReader(payload)
-	result, err := read(r, 5)
+	result, err := Read(r, 5)
 
 	if err != nil {
 		t.Fatalf("error in reading, input: %s, error: %s", msg, err)
@@ -37,11 +43,11 @@ func TestReadLarge(t *testing.T) {
 
 func TestReadInvalid(t *testing.T) {
 	msg := ""
-	payload := formatStr(msg)
+	payload := formatter(msg)
 	r := bytes.NewReader(payload)
-	_, err := read(r, 100)
+	_, err := Read(r, 100)
 
 	if err == nil {
-		t.Fatal("read must return error as the payload was empty")
+		t.Fatal("Read must return error as the payload was empty")
 	}
 }

@@ -1,6 +1,7 @@
 package socketserver
 
 import (
+	"go-broker/internal/socketserver/util"
 	"io"
 )
 
@@ -39,7 +40,7 @@ func (c *socketClient) startReceive() {
 			return
 		}
 
-		msg, err := read(c.connection, 1024)
+		msg, err := util.Read(c.connection, 1024)
 
 		if err != nil {
 			continue

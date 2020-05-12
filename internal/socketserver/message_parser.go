@@ -1,41 +1,46 @@
 package socketserver
 
 import (
-	"bytes"
-	log "github.com/sirupsen/logrus"
+	"errors"
+	"fmt"
+	"go-broker/internal/socketserver/serializer"
 )
 
-func parseMessage(message []byte) baseMessage {
-
-	// split the message based on the \n
-	msgParts := bytes.Split(message, []byte("\n"))
-
-	// check if length is more than 1
-	if len(msgParts) <= 1 {
-		log.Errorf("the message isn't in valid format, it must contain more than once part, message: %s", string(message))
-		return nil
-	}
+func parseMessage(message []byte) (interface{}, error) {
 
 	// extract the message type
-	msgType := msgParts[0]
+	msgType := message[:3]
 
-	payload := msgParts[1:]
+	payload := message[3:]
+
+	s := serializer.NewJsonSerializer()
 
 	// parse based on type
 	switch string(msgType) {
 	case authenticateMessageType:
-		return authenticateMessageFromPayload(payload)
+		msg := &authenticateMessage{}
+		err := s.Deserialize(payload, msg)
+		return msg, err
 	case routedMessageType:
-		return routedMessageFromPayload(payload)
+		msg := &routedMessage{}
+		err := s.Deserialize(payload, msg)
+		return msg, err
 	case subscribeMessageType:
-		return subscribeMessageFromPayload(payload)
+		msg := &subscribeMessage{}
+		err := s.Deserialize(payload, msg)
+		return msg, err
 	case ackMessageType:
-		return ackMessageFromPayload(payload)
+		msg := &ackMessage{}
+		err := s.Deserialize(payload, msg)
+		return msg, err
 	case nackMessageType:
-		return nackMessageFromPayload(payload)
+		msg := &nackMessage{}
+		err := s.Deserialize(payload, msg)
+		return msg, err
 
 	}
 
-	return nil
+	errMsg := fmt.Sprintf("the message type %s cannot be parsed", string(msgType))
+	return nil, errors.New(errMsg)
 
 }
