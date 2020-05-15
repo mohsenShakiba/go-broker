@@ -57,7 +57,7 @@ func Test_Publisher_Valid(t *testing.T) {
 	publisherOneRecEv := readAuthenticateMessage(t, publisherOne)
 
 	if publisherOneRecEv.Success {
-		t.Fatalf("the received authentication message must indicate false result %t", publisherOneRecEv.Success)
+		t.Fatalf("the received authentication tcpMessage must indicate false result %t", publisherOneRecEv.Success)
 	}
 
 	// test invalid authentication for subscriber
@@ -72,22 +72,22 @@ func Test_Publisher_Valid(t *testing.T) {
 	subscriberOneRecEv := readAuthenticateMessage(t, subscriberOne)
 
 	if subscriberOneRecEv.Success {
-		t.Fatalf("the received authentication message must indicate false result %t", subscriberOneRecEv.Success)
+		t.Fatalf("the received authentication tcpMessage must indicate false result %t", subscriberOneRecEv.Success)
 	}
 
-	// send message from unauthenticated publisher make sure message is not received
+	// send tcpMessage from unauthenticated publisher make sure tcpMessage is not received
 	publishMessage(t, "1", "TEST1", "BODY")
 
 	time.Sleep(time.Second)
 
 	select {
 	case <-publishMessageChan:
-		t.Fatalf("we should not receive the publish message as this point")
+		t.Fatalf("we should not receive the publish tcpMessage as this point")
 	default:
 		break
 	}
 
-	// test valid authentication message for publisher
+	// test valid authentication tcpMessage for publisher
 	validAuthMsg := createAuthMessage(t, validUserName, validPassword)
 	_, err = publisherOne.Write(validAuthMsg)
 
@@ -96,10 +96,10 @@ func Test_Publisher_Valid(t *testing.T) {
 	publisherOneRecEv = readAuthenticateMessage(t, publisherOne)
 
 	if !publisherOneRecEv.Success {
-		t.Fatalf("the received authentication message must indicate true result %t", publisherOneRecEv.Success)
+		t.Fatalf("the received authentication tcpMessage must indicate true result %t", publisherOneRecEv.Success)
 	}
 
-	// test valid authentication message for subscriber
+	// test valid authentication tcpMessage for subscriber
 	_, err = subscriberOne.Write(validAuthMsg)
 
 	time.Sleep(time.Second)
@@ -107,38 +107,38 @@ func Test_Publisher_Valid(t *testing.T) {
 	subscriberOneRecEv = readAuthenticateMessage(t, subscriberOne)
 
 	if !subscriberOneRecEv.Success {
-		t.Fatalf("the received authentication message must indicate true result %t", publisherOneRecEv.Success)
+		t.Fatalf("the received authentication tcpMessage must indicate true result %t", publisherOneRecEv.Success)
 	}
 
-	// send subscription message
+	// send subscription tcpMessage
 	subscriptionMessage := createSubscriptionMessage(t, "NOT_EXISTING_ROUTE")
 	_, err = subscriberOne.Write(subscriptionMessage)
 
 	if err != nil {
-		t.Fatalf("failed to send subscription message, error: %s", err)
+		t.Fatalf("failed to send subscription tcpMessage, error: %s", err)
 	}
 
 	// must receive subscription event
 
-	// test publish a message to invalid route
+	// test publish a tcpMessage to invalid route
 
-	// test receive message from invalid route
+	// test receive tcpMessage from invalid route
 
-	// test publish a message to valid route
+	// test publish a tcpMessage to valid route
 
-	// test receive message from valid route
+	// test receive tcpMessage from valid route
 
-	// test nack message
+	// test nack tcpMessage
 
 	// create new subscriber client
 
-	// message must be received in the new client
+	// tcpMessage must be received in the new client
 
-	// test ack message
+	// test ack tcpMessage
 
 	// create new subscriber
 
-	// the message must not be delivered to the new client
+	// the tcpMessage must not be delivered to the new client
 
 }
 
@@ -154,7 +154,7 @@ func createAuthMessage(t *testing.T, userName string, password string) []byte {
 	serializedMsg, err := jsonSerializer.Serialize(msg)
 
 	if err != nil {
-		t.Fatalf("serialization of authentication message failed, error: %s", err)
+		t.Fatalf("serialization of authentication tcpMessage failed, error: %s", err)
 	}
 
 	return formatter("AUT", serializedMsg)
@@ -186,7 +186,7 @@ func createSubscriptionMessage(t *testing.T, route string) []byte {
 	serializedMsg, err := jsonSerializer.Serialize(msg)
 
 	if err != nil {
-		t.Fatalf("serialization of subscription message failed, error: %s", err)
+		t.Fatalf("serialization of subscription tcpMessage failed, error: %s", err)
 	}
 
 	return formatter("SUB", serializedMsg)
@@ -204,7 +204,7 @@ func publishMessage(t *testing.T, id string, route string, payload string) []byt
 	serializedMsg, err := jsonSerializer.Serialize(msg)
 
 	if err != nil {
-		t.Fatalf("serialization of authentication message failed, error: %s", err)
+		t.Fatalf("serialization of authentication tcpMessage failed, error: %s", err)
 	}
 
 	return formatter("PUB", serializedMsg)

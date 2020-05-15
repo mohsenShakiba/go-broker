@@ -8,6 +8,11 @@ import (
 	"net"
 )
 
+type SocketServerConfig struct {
+	Credentials    []string
+	ConnectionPort int32
+}
+
 type Server struct {
 	config               SocketServerConfig
 	listener             net.Listener
@@ -99,17 +104,17 @@ func (s *Server) processClientEvents(clientMsg clientMessage) {
 	client := s.findClientById(clientMsg.clientId)
 
 	if client == nil {
-		log.Errorf("a message was published from unknown client with Id: %s", clientMsg.clientId)
+		log.Errorf("a tcpMessage was published from unknown client with Id: %s", clientMsg.clientId)
 	}
 
-	// parse the message
+	// parse the tcpMessage
 	parsedMsg, err := parseMessage(clientMsg.payload)
 
 	if err != nil {
-		log.Errorf("parsing message failed, error: %s", err)
+		log.Errorf("parsing tcpMessage failed, error: %s", err)
 	}
 
-	// detect the type of message
+	// detect the type of tcpMessage
 	switch v := parsedMsg.(type) {
 	case *authenticateMessage:
 		s.authenticateClient(client, v)
@@ -197,7 +202,7 @@ func (s *Server) processRoutedMessage(client *socketClient, msg *routedMessage) 
 		return
 	}
 
-	// send message to manager
+	// send tcpMessage to manager
 	ev := &PublishMessageEvent{
 		ClientId: client.clientId,
 		MsgId:    msg.Id,
