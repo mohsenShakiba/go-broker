@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/socketserver/serializer"
 	"net"
 )
 
@@ -108,30 +107,7 @@ func (s *Server) processClientEvents(clientMsg clientMessage) {
 	}
 
 	// parse the tcpMessage
-	parsedMsg, err := parseMessage(clientMsg.payload)
-
-	if err != nil {
-		log.Errorf("parsing tcpMessage failed, error: %s", err)
-	}
-
-	// detect the type of tcpMessage
-	switch v := parsedMsg.(type) {
-	case *authenticateMessage:
-		s.authenticateClient(client, v)
-		break
-	case *routedMessage:
-		s.processRoutedMessage(client, v)
-		break
-	case *subscribeMessage:
-		s.processSubscribeMessage(client, v)
-		break
-	case *ackMessage:
-		s.processAckMessage(client, v)
-		break
-	case *nackMessage:
-		s.processNackMessage(client, v)
-		break
-	}
+	msgContext := convertToMessage(clientMsg.payload)
 
 }
 
@@ -142,132 +118,4 @@ func (s *Server) findClientById(id string) *socketClient {
 		}
 	}
 	return nil
-}
-
-func (s *Server) authenticateClient(client *socketClient, msg *authenticateMessage) {
-
-	if client.isAuthenticated {
-		log.Warnf("the client %s has already been authenticated, ignoring", client.clientId)
-		return
-	}
-
-	cred := fmt.Sprintf("%s:%s", msg.UserName, msg.Password)
-	binarySerializer := serializer.NewJsonSerializer()
-
-	for _, validCred := range s.config.Credentials {
-		if cred == validCred {
-			// set a authenticated
-			client.setAsAuthenticated()
-
-			// send authentication event
-			successEv := receiveMessage{
-				Id:      msg.Id,
-				Success: true,
-			}
-
-			successEvBinary, err := binarySerializer.Serialize(&successEv)
-
-			if err != nil {
-				log.Errorf("failed to serialize authenticate event, error: %s", err)
-				break
-			}
-
-			// send event
-			log.Infof("authentication was successful for client %s", client.clientId)
-			client.send(successEvBinary)
-
-			return
-		}
-	}
-
-	// send authentication failed event
-	failedEv := receiveMessage{
-		Id:      msg.Id,
-		Success: false,
-	}
-
-	log.Infof("authentication failed for client %s", client.clientId)
-	failedEvBinary, _ := binarySerializer.Serialize(&failedEv)
-
-	// send event
-	client.send(failedEvBinary)
-
-}
-
-func (s *Server) processRoutedMessage(client *socketClient, msg *routedMessage) {
-
-	// check if client is authenticated
-	if !client.isAuthenticated {
-		log.Warnf("the client %s isn't authenticated to send routed messages, ignoring", client.clientId)
-		return
-	}
-
-	// send tcpMessage to manager
-	ev := &PublishMessageEvent{
-		ClientId: client.clientId,
-		MsgId:    msg.Id,
-		Routes:   msg.Routes,
-		Payload:  msg.Payload,
-	}
-
-	s.publishedMessageChan <- ev
-
-}
-
-func (s *Server) processSubscribeMessage(client *socketClient, msg *subscribeMessage) {
-
-	// check if client is authenticated
-	if !client.isAuthenticated {
-		log.Warnf("the client %s isn't authenticated for subscription, ignoring", client.clientId)
-		return
-	}
-
-	client.clientType = clientSubscriber
-
-	log.Infof("the client %s was registered as subscriber", client.clientId)
-
-	// send subscription config to sender
-	ev := &SubscriberAuthenticatedEvent{
-		ClientId: client.clientId,
-		Routes:   msg.Routes,
-		BufSize:  msg.BufSize,
-	}
-
-	s.publishedMessageChan <- ev
-
-	// send the rec event
-	recMsg := receiveMessage{
-		Id:      msg.Id,
-		Success: true,
-	}
-
-	binarySerializer := serializer.NewJsonSerializer()
-
-	recMsgSerialized, _ := binarySerializer.Serialize(&recMsg)
-
-	client.send(recMsgSerialized)
-}
-
-func (s *Server) processAckMessage(client *socketClient, msg *ackMessage) {
-
-	// check if client is authenticated
-	if !client.isAuthenticated {
-		log.Warnf("the client %s isn't authenticated for ack, ignoring", client.clientId)
-		return
-	}
-
-	// send ack to manager
-
-}
-
-func (s *Server) processNackMessage(client *socketClient, msg *nackMessage) {
-
-	// check if client is authenticated
-	if !client.isAuthenticated {
-		log.Warnf("the client %s isn't authenticated for nack, ignoring", client.clientId)
-		return
-	}
-
-	// send nack to manager
-
 }

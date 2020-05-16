@@ -96,10 +96,12 @@ func (m *MessageContext) SendAck() error {
 	_, err := m.socketConn.Write([]byte(m.Serializer.GetMessagePrefix()))
 
 	if err != nil {
-		return errors.New("failed tow write message prefix to socket connection")
+		return err
 	}
 
 	_, err = m.socketConn.Write(m.Serializer.Bytes)
+
+	return err
 }
 
 func (m *MessageContext) Close() {
