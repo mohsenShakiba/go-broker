@@ -41,5 +41,4 @@ func (s *jsonSerializer) Deserialize(payload []byte, msg interface{}) error {
 	err := json.Unmarshal(payload, msg)
 
 	return err
-
 }
