@@ -1,21 +1,21 @@
-package socketserver
+package tcp
 
 import (
 	"bytes"
 	"errors"
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/socketserver/serializer"
+	"go-broker/internal/tcp/serializer"
 	"io"
 	"strconv"
 )
 
 type MessageContext struct {
 	PayloadMap map[string][]byte
-	socketConn io.ReadWriteCloser
-	Serializer serializer.LineSeparatedSerializer
+	client     io.WriteCloser
+	Serializer *serializer.LineSeparatedSerializer
 }
 
-func convertToMessage(b []byte) *MessageContext {
+func convertToMessage(b []byte, client *socketClient) *MessageContext {
 
 	newLineB := []byte("\n")
 	colonB := []byte(":")
@@ -35,10 +35,13 @@ func convertToMessage(b []byte) *MessageContext {
 		tcpMsg.PayloadMap[string(part[0])] = partsByColon[1]
 	}
 
+	tcpMsg.client = client
+	tcpMsg.Serializer = serializer.NewLineSeparatedSerializer(1024)
+
 	return tcpMsg
 }
 
-func (m *MessageContext) readByteArr(key string) ([]byte, bool) {
+func (m *MessageContext) ReadByteArr(key string) ([]byte, bool) {
 	value := m.PayloadMap[key]
 
 	if value == nil {
@@ -48,7 +51,7 @@ func (m *MessageContext) readByteArr(key string) ([]byte, bool) {
 	return value, true
 }
 
-func (m *MessageContext) readStr(key string) (string, bool) {
+func (m *MessageContext) ReadStr(key string) (string, bool) {
 	value := m.PayloadMap[key]
 
 	if value == nil {
@@ -58,7 +61,7 @@ func (m *MessageContext) readStr(key string) (string, bool) {
 	return string(value), true
 }
 
-func (m *MessageContext) readInt(key string) (int, bool) {
+func (m *MessageContext) ReadInt(key string) (int, bool) {
 	value := m.PayloadMap[key]
 
 	if value == nil {
@@ -75,11 +78,11 @@ func (m *MessageContext) readInt(key string) (int, bool) {
 }
 
 func (m *MessageContext) GetMessageId() (string, bool) {
-	return m.readStr("msgId")
+	return m.ReadStr("msgId")
 }
 
 func (m *MessageContext) GetMessageType() (string, bool) {
-	return m.readStr("type")
+	return m.ReadStr("type")
 }
 
 func (m *MessageContext) SendAck() error {
@@ -93,17 +96,17 @@ func (m *MessageContext) SendAck() error {
 	m.Serializer.WriteStr("type", "ACK")
 	m.Serializer.WriteStr("msgId", msgId)
 
-	_, err := m.socketConn.Write([]byte(m.Serializer.GetMessagePrefix()))
+	_, err := m.client.Write([]byte(m.Serializer.GetMessagePrefix()))
 
 	if err != nil {
 		return err
 	}
 
-	_, err = m.socketConn.Write(m.Serializer.Bytes)
+	_, err = m.client.Write(m.Serializer.Bytes)
 
 	return err
 }
 
 func (m *MessageContext) Close() {
-	_ = m.socketConn.Close()
+	_ = m.client.Close()
 }

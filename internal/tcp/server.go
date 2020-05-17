@@ -1,4 +1,4 @@
-package socketserver
+package tcp
 
 import (
 	"fmt"
@@ -7,33 +7,38 @@ import (
 	"net"
 )
 
-type SocketServerConfig struct {
+type TcpConfig struct {
 	Credentials    []string
 	ConnectionPort int32
 }
 
 type Server struct {
-	config               SocketServerConfig
-	listener             net.Listener
-	messageChan          chan clientMessage
-	clients              []*socketClient
-	publishedMessageChan chan<- ServerEvents
+	config        TcpConfig
+	listener      net.Listener
+	clients       []*socketClient
+	clientMsgChan chan clientMessage
+	handlers      map[string]func(msgHandler *MessageContext)
 }
 
-func Init(config SocketServerConfig, publishMessageChan chan<- ServerEvents) *Server {
+func Init(config TcpConfig, publishMessageChan chan<- clientMessage) *Server {
 
-	s := &Server{}
-
-	s.messageChan = make(chan clientMessage, 100)
-	s.clients = make([]*socketClient, 0, 100)
-	s.publishedMessageChan = publishMessageChan
-	s.config = config
+	s := &Server{
+		config:        config,
+		listener:      nil,
+		clients:       make([]*socketClient, 0, 100),
+		clientMsgChan: make(chan clientMessage, 100),
+		handlers:      make(map[string]func(msgHandler *MessageContext), 0),
+	}
 
 	go s.listen()
 
 	go s.listenToClientEvents()
 
 	return s
+}
+
+func (s *Server) RegisterHandler(t string, handler func(msgHandler *MessageContext)) {
+	s.handlers[t] = handler
 }
 
 // this method will fireup the socket server
@@ -73,12 +78,10 @@ func (s *Server) handleConnection(conn net.Conn) {
 	clientId := uuid.New()
 
 	client := &socketClient{
-		clientId:        clientId.String(),
-		clientType:      clientUndetermined,
-		isClosed:        false,
-		isAuthenticated: false,
-		connection:      conn,
-		onMessageChan:   s.messageChan,
+		clientId:      clientId.String(),
+		isClosed:      false,
+		connection:    conn,
+		onMessageChan: s.clientMsgChan,
 	}
 
 	log.Infof("added a new client with Id: %s", clientId)
@@ -91,7 +94,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 func (s *Server) listenToClientEvents() {
 	for {
-		clientMsg := <-s.messageChan
+		clientMsg := <-s.clientMsgChan
 		s.processClientEvents(clientMsg)
 	}
 }
@@ -107,7 +110,23 @@ func (s *Server) processClientEvents(clientMsg clientMessage) {
 	}
 
 	// parse the tcpMessage
-	msgContext := convertToMessage(clientMsg.payload)
+	msgContext := convertToMessage(clientMsg.payload, client)
+
+	msgType, ok := msgContext.GetMessageType()
+
+	if !ok {
+		log.Errorf("the message doesn't seem to have a valid message type, msg type: %s", msgType)
+		return
+	}
+
+	mh := s.handlers[msgType]
+
+	if mh == nil {
+		log.Errorf("no handler has been registered for type %s", msgType)
+		return
+	}
+
+	mh(msgContext)
 
 }
 
