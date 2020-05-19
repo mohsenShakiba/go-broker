@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -39,6 +40,19 @@ func Init(config TcpConfig, publishMessageChan chan<- clientMessage) *Server {
 
 func (s *Server) RegisterHandler(t string, handler func(msgHandler *MessageContext)) {
 	s.handlers[t] = handler
+}
+
+func (s *Server) SendToClient(clientId string, payload []byte) error {
+	c := s.findClientById(clientId)
+
+	if c == nil {
+		log.Errorf("not client was found for id %s", clientId)
+		return errors.New("client not found")
+	}
+
+	_, err := c.Write(payload)
+
+	return err
 }
 
 // this method will fireup the socket server

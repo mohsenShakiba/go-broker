@@ -7,6 +7,7 @@ import (
 )
 
 type PublishedMessage struct {
+	MsgId   string
 	Routes  []string
 	Payload []byte
 }
@@ -60,6 +61,7 @@ func (p *PublisherManager) handlePublishMessage(msgContext *tcp.MessageContext) 
 	msg := &PublishedMessage{
 		Routes:  routesArr,
 		Payload: payload,
+		MsgId:   msgId,
 	}
 
 	p.publishedMessageChan <- msg
