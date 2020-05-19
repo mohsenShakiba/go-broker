@@ -10,6 +10,7 @@ import (
 )
 
 type MessageContext struct {
+	ClientId   string
 	PayloadMap map[string][]byte
 	client     io.WriteCloser
 	Serializer *serializer.LineSeparatedSerializer
@@ -35,8 +36,9 @@ func convertToMessage(b []byte, client *socketClient) *MessageContext {
 		tcpMsg.PayloadMap[string(part[0])] = partsByColon[1]
 	}
 
+	tcpMsg.ClientId = client.clientId
 	tcpMsg.client = client
-	tcpMsg.Serializer = serializer.NewLineSeparatedSerializer(1024)
+	tcpMsg.Serializer = serializer.NewLineSeparatedSerializer()
 
 	return tcpMsg
 }
