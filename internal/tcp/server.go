@@ -21,7 +21,7 @@ type Server struct {
 	handlers      map[string]func(msgHandler *MessageContext)
 }
 
-func Init(config TcpConfig, publishMessageChan chan<- clientMessage) *Server {
+func Init(config TcpConfig) *Server {
 
 	s := &Server{
 		config:        config,

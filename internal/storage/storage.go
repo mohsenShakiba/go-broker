@@ -81,5 +81,5 @@ func (s *Storage) Remove(msgId string) error {
 
 	indexRow.deleted = true
 
-	return err
+	return s.index.writeAll()
 }

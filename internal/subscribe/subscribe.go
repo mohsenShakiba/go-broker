@@ -33,7 +33,7 @@ type MessageResult struct {
 	Result string
 }
 
-func InitSubscriberManager(socketServer *tcp.Server, publishMessageChan <-chan *PublishedMessage) {
+func InitSubscriberManager(socketServer *tcp.Server, publishMessageChan <-chan *PublishedMessage) *SubscriberManager {
 	mgr := SubscriberManager{
 		messageResultChan:  nil,
 		publishMessageChan: publishMessageChan,
@@ -47,6 +47,8 @@ func InitSubscriberManager(socketServer *tcp.Server, publishMessageChan <-chan *
 	socketServer.RegisterHandler("NCK", mgr.handleNackMessage)
 
 	go mgr.processMessageQueue()
+
+	return &mgr
 }
 
 func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContext) {
