@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -25,12 +26,24 @@ type Storage struct {
 }
 
 func Init(basePath string) (*Storage, error) {
+
+	indexPath := fmt.Sprintf("%s/%s", basePath, indexName)
+	bodyPath := fmt.Sprintf("%s/%s", basePath, mainName)
+
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		os.Create(indexPath)
+	}
+
+	if _, err := os.Stat(bodyPath); os.IsNotExist(err) {
+		os.Create(bodyPath)
+	}
+
 	storage := Storage{
 		Path: basePath,
 		index: index{
 			indices:       make([]*indexRow, 0),
-			indexFilePath: fmt.Sprintf("%s.%s", basePath, indexName),
-			bodyFilePath:  fmt.Sprintf("%s.%s", basePath, mainName),
+			indexFilePath: indexPath,
+			bodyFilePath:  bodyPath,
 		},
 		msgMap: make(map[string]*indexRow),
 		mutex:  sync.Mutex{},
@@ -82,4 +95,34 @@ func (s *Storage) Remove(msgId string) error {
 	indexRow.deleted = true
 
 	return s.index.writeAll()
+}
+
+func (s *Storage) read(msgId string) *Message {
+
+	// find the index
+	var index *indexRow
+
+	for _, i := range s.index.indices {
+		if i.msgId == msgId {
+			index = i
+		}
+	}
+
+	if index == nil {
+		return nil
+	}
+
+	// read body
+
+	body := s.index.readBody(index)
+
+	if body == nil {
+		return nil
+	}
+
+	return &Message{
+		MsgId:   msgId,
+		Routes:  body.routes,
+		Payload: body.payload,
+	}
 }
