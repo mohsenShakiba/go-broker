@@ -2,6 +2,7 @@ package subscribe
 
 import (
 	"go-broker/internal/tcp"
+	"go-broker/internal/tcp/serializer"
 	"sync"
 	"time"
 )
@@ -54,6 +55,17 @@ func (s *Subscriber) sendPendingMessages() {
 
 		s.sendMessageMap[msg.MsgId] = msg
 		s.mutex.Unlock()
-		s.server.SendToClient(s.clientId, msg.Payload)
+
+		ser := serializer.NewLineSeparatedSerializer()
+
+		ser.WriteStr("msgId", msg.MsgId)
+		ser.WriteBytes("payload", msg.Payload)
+
+		s.server.SendToClient(s.clientId, []byte(ser.GetMessagePrefix()))
+
+		for _, b := range ser.Bytes {
+			s.server.SendToClient(s.clientId, b)
+		}
+
 	}
 }

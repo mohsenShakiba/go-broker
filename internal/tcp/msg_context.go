@@ -21,7 +21,9 @@ func convertToMessage(b []byte, client *socketClient) *MessageContext {
 	newLineB := []byte("\n")
 	colonB := []byte(":")
 
-	tcpMsg := &MessageContext{}
+	tcpMsg := &MessageContext{
+		PayloadMap: make(map[string][]byte),
+	}
 
 	// split by new line
 	partsByNewLine := bytes.Split(b, newLineB)
@@ -33,7 +35,7 @@ func convertToMessage(b []byte, client *socketClient) *MessageContext {
 			log.Warnf("bad payload data, discarding, message: %s", string(part))
 		}
 
-		tcpMsg.PayloadMap[string(part[0])] = partsByColon[1]
+		tcpMsg.PayloadMap[string(partsByColon[0])] = partsByColon[1]
 	}
 
 	tcpMsg.ClientId = client.clientId
@@ -104,9 +106,16 @@ func (m *MessageContext) SendAck() error {
 		return err
 	}
 
-	_, err = m.client.Write(m.Serializer.Bytes)
+	for _, b := range m.Serializer.Bytes {
+		_, err = m.client.Write(b)
 
-	return err
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
 }
 
 func (m *MessageContext) Close() {

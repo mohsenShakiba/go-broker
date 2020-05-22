@@ -23,7 +23,7 @@ func InitPublisherManager(ch chan<- *PublishedMessage, server *tcp.Server) *Publ
 	}
 
 	// add handlers
-	server.RegisterHandler("PUb", receiver.handlePublishMessage)
+	server.RegisterHandler("PUB", receiver.handlePublishMessage)
 
 	return receiver
 }

@@ -57,5 +57,5 @@ func Read(i io.Reader, size int) ([]byte, error) {
 		return nil, err
 	}
 
-	return msg[4:l], nil
+	return msg[5:l], nil
 }

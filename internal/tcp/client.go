@@ -2,14 +2,15 @@ package tcp
 
 import (
 	"go-broker/internal/tcp/util"
-	"io"
+	"net"
 	"sync"
+	"time"
 )
 
 type socketClient struct {
 	clientId      string
 	isClosed      bool
-	connection    io.ReadWriteCloser
+	connection    net.Conn
 	onMessageChan chan<- clientMessage
 	lock          sync.Mutex
 }
@@ -21,6 +22,7 @@ type clientMessage struct {
 
 func (c *socketClient) startReceive() {
 	for {
+		c.connection.SetReadDeadline(time.Now().Add(time.Second))
 		c.read()
 	}
 }
@@ -42,12 +44,14 @@ func (c *socketClient) read() {
 		return
 	}
 
+	if msg == nil {
+		return
+	}
+
 	c.onMessageChan <- clientMessage{
 		clientId: c.clientId,
 		payload:  msg,
 	}
-
-	c.lock.Unlock()
 }
 
 func (c *socketClient) Close() error {
@@ -63,5 +67,5 @@ func (c *socketClient) Write(b []byte) (int, error) {
 	defer func() {
 		c.lock.Unlock()
 	}()
-	return c.Write(b)
+	return c.connection.Write(b)
 }

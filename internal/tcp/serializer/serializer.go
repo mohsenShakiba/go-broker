@@ -27,5 +27,5 @@ func (ls *LineSeparatedSerializer) WriteBytes(key string, value []byte) {
 }
 
 func (ls *LineSeparatedSerializer) GetMessagePrefix() string {
-	return fmt.Sprintf("%04d\n", len(ls.Bytes)+7)
+	return fmt.Sprintf("%04d\n", len(ls.Bytes)+5)
 }

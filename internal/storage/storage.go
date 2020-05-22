@@ -62,8 +62,8 @@ func Init(basePath string) (*Storage, error) {
 func (s *Storage) Add(m *Message) error {
 
 	offset, length, err := s.index.writeBody(&bodyRow{
-		routes:  m.Routes,
-		payload: m.Payload,
+		Routes:  m.Routes,
+		Payload: m.Payload,
 	})
 
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *Storage) read(msgId string) *Message {
 
 	return &Message{
 		MsgId:   msgId,
-		Routes:  body.routes,
-		Payload: body.payload,
+		Routes:  body.Routes,
+		Payload: body.Payload,
 	}
 }

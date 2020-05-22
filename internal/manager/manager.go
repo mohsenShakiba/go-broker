@@ -1,6 +1,7 @@
 package manager
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/publish"
 	"go-broker/internal/storage"
 	"go-broker/internal/subscribe"
@@ -14,7 +15,7 @@ type Manager struct {
 	storage           *storage.Storage
 }
 
-func InitManager() *Manager {
+func InitManager(basePath string) (*Manager, error) {
 
 	publishMessageChan := make(chan *publish.PublishedMessage)
 	subscriberChan := make(chan *subscribe.PublishedMessage)
@@ -28,7 +29,11 @@ func InitManager() *Manager {
 
 	subscriberManager := subscribe.InitSubscriberManager(socketServer, subscriberChan)
 
-	storage, err := storage.Init("")
+	storage, err := storage.Init(basePath)
+
+	if err != nil {
+		return nil, err
+	}
 
 	mgr := &Manager{
 		socketServer:      socketServer,
@@ -37,5 +42,21 @@ func InitManager() *Manager {
 		storage:           storage,
 	}
 
-	return mgr
+	go mgr.processPublishedMessage(publishMessageChan, subscriberChan)
+
+	return mgr, nil
+}
+
+func (m *Manager) processPublishedMessage(publishedChan chan *publish.PublishedMessage, subChan chan *subscribe.PublishedMessage) {
+	for {
+		msg := <-publishedChan
+
+		log.Infof("publishing message with id %s to subscribers", msg.MsgId)
+
+		subChan <- &subscribe.PublishedMessage{
+			MsgId:   msg.MsgId,
+			Payload: msg.Payload,
+			Routes:  msg.Routes,
+		}
+	}
 }

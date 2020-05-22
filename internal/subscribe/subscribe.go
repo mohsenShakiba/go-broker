@@ -52,6 +52,7 @@ func InitSubscriberManager(socketServer *tcp.Server, publishMessageChan <-chan *
 }
 
 func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContext) {
+
 	clientId := msgContext.ClientId
 
 	routesStr, ok := msgContext.ReadStr("routes")
@@ -86,6 +87,8 @@ func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContex
 	}
 
 	s.clientMapping[clientId] = &client
+
+	log.Infof("added subscriber with client id: %s for routes: %s", clientId, routesStr)
 
 	for _, route := range routes {
 

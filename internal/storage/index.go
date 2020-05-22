@@ -40,6 +40,8 @@ func (i *index) readAll() error {
 
 	}
 
+	i.indices = indexRows
+
 	return nil
 }
 

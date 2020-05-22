@@ -50,6 +50,8 @@ func (s *Server) SendToClient(clientId string, payload []byte) error {
 		return errors.New("client not found")
 	}
 
+	log.Infof("sending message with id: %s to client id: %s", clientId)
+
 	_, err := c.Write(payload)
 
 	return err
@@ -127,6 +129,8 @@ func (s *Server) processClientEvents(clientMsg clientMessage) {
 	msgContext := convertToMessage(clientMsg.payload, client)
 
 	msgType, ok := msgContext.GetMessageType()
+
+	log.Infof("message with type: %s was received", msgType)
 
 	if !ok {
 		log.Errorf("the message doesn't seem to have a valid message type, msg type: %s", msgType)
