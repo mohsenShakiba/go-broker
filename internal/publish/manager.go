@@ -2,21 +2,16 @@ package publish
 
 import (
 	log "github.com/sirupsen/logrus"
+	"go-broker/internal/message"
 	"go-broker/internal/tcp"
 	"strings"
 )
 
-type PublishedMessage struct {
-	MsgId   string
-	Routes  []string
-	Payload []byte
-}
-
 type PublisherManager struct {
-	publishedMessageChan chan<- *PublishedMessage
+	publishedMessageChan chan<- *message.Message
 }
 
-func InitPublisherManager(ch chan<- *PublishedMessage, server *tcp.Server) *PublisherManager {
+func InitPublisherManager(ch chan<- *message.Message, server *tcp.Server) *PublisherManager {
 
 	receiver := &PublisherManager{
 		publishedMessageChan: ch,
@@ -28,10 +23,10 @@ func InitPublisherManager(ch chan<- *PublishedMessage, server *tcp.Server) *Publ
 	return receiver
 }
 
-func (p *PublisherManager) handlePublishMessage(msgContext *tcp.MessageContext) {
+func (p *PublisherManager) handlePublishMessage(clientMessage *tcp.ClientMessage) {
 
 	// get message routes
-	msgId, ok := msgContext.GetMessageId()
+	msgId, ok := clientMessage.Message.ReadMsgId()
 
 	if !ok {
 		log.Errorf("the published message doesn't have a valid msgId, discarding message")
@@ -39,7 +34,7 @@ func (p *PublisherManager) handlePublishMessage(msgContext *tcp.MessageContext) 
 	}
 
 	// get message routes
-	routesStr, ok := msgContext.ReadStr("routes")
+	routesStr, ok := clientMessage.Message.ReadStr("routes")
 
 	if !ok {
 		log.Errorf("the published message doesn't have a valid route, discarding message")
@@ -47,7 +42,7 @@ func (p *PublisherManager) handlePublishMessage(msgContext *tcp.MessageContext) 
 	}
 
 	// get message payload
-	payload, ok := msgContext.ReadByteArr("payload")
+	payload, ok := clientMessage.Message.ReadByteArr("payload")
 
 	if !ok {
 		log.Errorf("the published message doesn't have a valid payload, discarding message")
@@ -56,13 +51,6 @@ func (p *PublisherManager) handlePublishMessage(msgContext *tcp.MessageContext) 
 
 	// parse message routes
 	routesArr := strings.Split(routesStr, ",")
-
-	// create published message
-	msg := &PublishedMessage{
-		Routes:  routesArr,
-		Payload: payload,
-		MsgId:   msgId,
-	}
 
 	log.Infof("sending published message: %s to manager", msgId)
 

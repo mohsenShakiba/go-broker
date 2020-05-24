@@ -2,6 +2,7 @@ package subscribe
 
 import (
 	log "github.com/sirupsen/logrus"
+	"go-broker/internal/manager"
 	"go-broker/internal/tcp"
 	"strings"
 	"sync"
@@ -11,8 +12,8 @@ import (
 type SubscriberManager struct {
 	messageResultChan  chan<- *MessageResult
 	publishMessageChan <-chan *PublishedMessage
-	routesMapping      map[string][]*Subscriber
-	clientMapping      map[string]*Subscriber
+	routesMapping      map[string][]*manager.Subscriber
+	clientMapping      map[string]*manager.Subscriber
 	socketServer       *tcp.Server
 }
 
@@ -37,8 +38,8 @@ func InitSubscriberManager(socketServer *tcp.Server, publishMessageChan <-chan *
 	mgr := SubscriberManager{
 		messageResultChan:  nil,
 		publishMessageChan: publishMessageChan,
-		routesMapping:      make(map[string][]*Subscriber),
-		clientMapping:      make(map[string]*Subscriber),
+		routesMapping:      make(map[string][]*manager.Subscriber),
+		clientMapping:      make(map[string]*manager.Subscriber),
 		socketServer:       socketServer,
 	}
 
@@ -76,7 +77,7 @@ func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContex
 		log.Errorf("error while sending ack for subscribe message")
 	}
 
-	client := Subscriber{
+	client := manager.Subscriber{
 		clientId:           clientId,
 		server:             s.socketServer,
 		timer:              time.Timer{},
@@ -95,7 +96,7 @@ func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContex
 		clients := s.routesMapping[route]
 
 		if clients == nil {
-			clients = make([]*Subscriber, 0)
+			clients = make([]*manager.Subscriber, 0)
 		}
 
 		clients = append(clients, &client)

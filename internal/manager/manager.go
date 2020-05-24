@@ -23,7 +23,7 @@ func InitManager(basePath string) (*Manager, error) {
 	}
 
 	// create message chan
-	messageChan := make(chan tcp.Message)
+	messageChan := make(chan tcp.ClientMessage)
 
 	// create socket server
 	socketServer := tcp.Init(socketServerConf, messageChan)

@@ -39,7 +39,7 @@ func TestWrite(t *testing.T) {
 	response := s.read("test")
 
 	if string(response.Payload) != string(msg.Payload) {
-		t.Fatalf("the Payload of messages don't match")
+		t.Fatalf("the Message of messages don't match")
 	}
 
 }

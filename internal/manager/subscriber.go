@@ -1,26 +1,58 @@
-package subscribe
+package manager
 
 import (
 	log "github.com/sirupsen/logrus"
+	"go-broker/internal/message"
 	"go-broker/internal/serializer"
+	"go-broker/internal/subscribe"
 	"go-broker/internal/tcp"
 	"sync"
 	"time"
 )
 
-type Subscriber struct {
-	clientId           string
-	server             *tcp.Server
-	timer              time.Timer
-	sendMessageMap     map[string]*PublishedMessage
-	queue              []*PublishedMessage
-	concurrentMsgCount int
-	mutex              sync.Mutex
+type subscriberConfig struct {
+	maxConcurrentMessageCount int
+	routes                    []string
 }
 
-func (s *Subscriber) enqueueMessage(message *PublishedMessage) {
+type Subscriber struct {
+	client           tcp.Client
+	config           subscriberConfig
+	sentMessages     map[string]*message.PublishMessage
+	sentMessageCount int
+	queue            []*message.PublishMessage
+	mutex            sync.Mutex
+}
+
+// start will start sending messages from the queue
+func (s *Subscriber) start() {
+
+	for {
+
+		// sleep if no messages are in the queue
+		if len(s.queue) == 0 {
+			time.Sleep(time.Millisecond * 100)
+		}
+
+		// if sentMessageCount is equal to config maxConcurrentMessageCount
+		if s.sentMessageCount >= s.config.maxConcurrentMessageCount {
+			time.Sleep(time.Millisecond * 100)
+		}
+
+		// retrieve message
+		msg := s.queue[0]
+		s.queue = s.queue[1:]
+
+		// add to sent messages
+		s.sentMessages[msg.MsgId] = msg
+
+		// send message
+
+	}
+}
+
+func (s *Subscriber) enqueueMessage(message *subscribe.PublishedMessage) {
 	s.queue = append(s.queue, message)
-	s.sendPendingMessages()
 }
 
 func (s *Subscriber) onMessageAck(msgId string) {
