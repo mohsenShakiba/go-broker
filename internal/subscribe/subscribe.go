@@ -69,7 +69,7 @@ func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContex
 		msgContext.Close()
 	}
 
-	// send ack
+	//send ack
 	err := msgContext.SendAck()
 
 	if err != nil {
@@ -160,6 +160,7 @@ func (s *SubscriberManager) processMessageQueue() {
 func (s *SubscriberManager) processMsg(msg *PublishedMessage) {
 	// check which client should receive the message
 	// enqueue the message in the client
+	log.Infof("Submanager, message received from publisher msgId: %s", msg.MsgId)
 	subscriberFound := false
 	for _, msgRoute := range msg.Routes {
 
@@ -174,6 +175,7 @@ func (s *SubscriberManager) processMsg(msg *PublishedMessage) {
 		}
 
 		for _, client := range clients {
+			log.Infof("Submanager, enqueue message with msgId: %s to client %s", msg.MsgId, client.clientId)
 			client.enqueueMessage(msg)
 			subscriberFound = true
 		}
@@ -186,8 +188,8 @@ func (s *SubscriberManager) processMsg(msg *PublishedMessage) {
 }
 
 func (s *SubscriberManager) setMsgResult(msg *PublishedMessage, result string) {
-	s.messageResultChan <- &MessageResult{
-		MsgId:  msg.MsgId,
-		Result: result,
-	}
+	//s.messageResultChan <- &MessageResult{
+	//	MsgId:  msg.MsgId,
+	//	Result: result,
+	//}
 }

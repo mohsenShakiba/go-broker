@@ -17,13 +17,28 @@ type Manager struct {
 
 func InitManager(basePath string) (*Manager, error) {
 
+	// create socket server config
+	socketServerConf := tcp.ServerConfig{
+		ConnectionPort: 8085,
+	}
+
+	// create message chan
+	messageChan := make(chan tcp.Message)
+
+	// create socket server
+	socketServer := tcp.Init(socketServerConf, messageChan)
+
+	// start socket server
+	socketServer.Start()
+
+	// create publisher
+
+	// create subscriber
+
+	// create manager
+
 	publishMessageChan := make(chan *publish.PublishedMessage)
 	subscriberChan := make(chan *subscribe.PublishedMessage)
-
-	socketServer := tcp.Init(tcp.TcpConfig{
-		Credentials:    []string{""},
-		ConnectionPort: 8085,
-	})
 
 	publisherManager := publish.InitPublisherManager(publishMessageChan, socketServer)
 

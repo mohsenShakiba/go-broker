@@ -1,8 +1,9 @@
 package subscribe
 
 import (
+	log "github.com/sirupsen/logrus"
+	"go-broker/internal/serializer"
 	"go-broker/internal/tcp"
-	"go-broker/internal/tcp/serializer"
 	"sync"
 	"time"
 )
@@ -19,6 +20,7 @@ type Subscriber struct {
 
 func (s *Subscriber) enqueueMessage(message *PublishedMessage) {
 	s.queue = append(s.queue, message)
+	s.sendPendingMessages()
 }
 
 func (s *Subscriber) onMessageAck(msgId string) {
@@ -41,7 +43,6 @@ func (s *Subscriber) onMessageNack(msgId string) {
 
 func (s *Subscriber) sendPendingMessages() {
 	for {
-		s.mutex.Lock()
 		if s.concurrentMsgCount <= 0 {
 			continue
 		}
@@ -54,18 +55,19 @@ func (s *Subscriber) sendPendingMessages() {
 		s.queue = s.queue[1:]
 
 		s.sendMessageMap[msg.MsgId] = msg
-		s.mutex.Unlock()
 
 		ser := serializer.NewLineSeparatedSerializer()
 
 		ser.WriteStr("msgId", msg.MsgId)
 		ser.WriteBytes("payload", msg.Payload)
 
-		s.server.SendToClient(s.clientId, []byte(ser.GetMessagePrefix()))
+		err := s.server.SendToClient(s.clientId, ser.GetMessageBytes())
 
-		for _, b := range ser.Bytes {
-			s.server.SendToClient(s.clientId, b)
+		if err != nil {
+			log.Errorf("error while sending to subscriber, err: %s", err)
 		}
+
+		log.Infof("Subscriber, sent msg with id: %s to client %s", msg.MsgId, s.clientId)
 
 	}
 }

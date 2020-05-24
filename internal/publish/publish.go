@@ -64,6 +64,8 @@ func (p *PublisherManager) handlePublishMessage(msgContext *tcp.MessageContext) 
 		MsgId:   msgId,
 	}
 
+	log.Infof("sending published message: %s to manager", msgId)
+
 	p.publishedMessageChan <- msg
 
 	err := msgContext.SendAck()

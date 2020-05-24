@@ -1,87 +1,65 @@
 package tcp
 
 import (
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net"
 )
 
-type TcpConfig struct {
-	Credentials    []string
+// ServerConfig will hold the information about the behavior of the socket server
+type ServerConfig struct {
 	ConnectionPort int32
 }
 
-type Server struct {
-	config        TcpConfig
-	listener      net.Listener
-	clients       []*socketClient
-	clientMsgChan chan clientMessage
-	handlers      map[string]func(msgHandler *MessageContext)
+type Message struct {
+	Payload []byte
+	Client  *Client
 }
 
-func Init(config TcpConfig) *Server {
+// Server will start a TCP socket server to accept incoming connections and read the data from the conn
+// the data is then sent to a chanel which is processed by the manager
+type Server struct {
+	config      ServerConfig
+	listener    net.Listener
+	clients     []*Client
+	messageChan chan<- Message
+	//handlers      map[string]func(msgHandler *MessageContext)
+}
+
+// Init will create a new socket server
+func Init(config ServerConfig, messageChan chan<- Message) *Server {
 
 	s := &Server{
-		config:        config,
-		listener:      nil,
-		clients:       make([]*socketClient, 0, 100),
-		clientMsgChan: make(chan clientMessage, 100),
-		handlers:      make(map[string]func(msgHandler *MessageContext), 0),
+		config:      config,
+		listener:    nil,
+		clients:     make([]*Client, 0, 100),
+		messageChan: messageChan,
 	}
-
-	go s.listen()
-
-	go s.listenToClientEvents()
 
 	return s
 }
 
-func (s *Server) RegisterHandler(t string, handler func(msgHandler *MessageContext)) {
-	s.handlers[t] = handler
-}
+// Start will start the socket server
+func (s *Server) Start() {
 
-func (s *Server) SendToClient(clientId string, payload []byte) error {
-	c := s.findClientById(clientId)
-
-	if c == nil {
-		log.Errorf("not client was found for id %s", clientId)
-		return errors.New("client not found")
-	}
-
-	log.Infof("sending message with id: %s to client id: %s", clientId)
-
-	_, err := c.Write(payload)
-
-	return err
-}
-
-// this method will fireup the socket server
-// it will also accept connection
-func (s *Server) listen() {
-
-	address := fmt.Sprintf(":%d", s.config.ConnectionPort)
-
-	ln, err := net.Listen("tcp", address)
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.ConnectionPort))
 
 	if err != nil {
 		log.Fatalf("couldn't listen on specified port, err: %s", err)
 	}
 
-	log.Infof("started listening on port %d", s.config.ConnectionPort)
+	defer listener.Close()
 
-	defer ln.Close()
+	log.Infof("started listening on port %d", s.config.ConnectionPort)
 
 	for {
 
-		c, err := ln.Accept()
-
-		log.Infof("a socket connection was established from %s", c.RemoteAddr())
+		c, err := listener.Accept()
 
 		if err != nil {
-			log.Errorf("error while accepting connection, err: %s", err)
-			return
+			log.Errorf("error while accepting conn, err: %s", err)
+			continue
 		}
 
 		go s.handleConnection(c)
@@ -89,70 +67,18 @@ func (s *Server) listen() {
 
 }
 
+// handleConnection will start accepting connections
 func (s *Server) handleConnection(conn net.Conn) {
 
 	clientId := uuid.New()
 
-	client := &socketClient{
-		clientId:      clientId.String(),
-		isClosed:      false,
-		connection:    conn,
-		onMessageChan: s.clientMsgChan,
+	client := &Client{
+		ClientId: clientId.String(),
+		conn:     conn,
 	}
 
 	log.Infof("added a new client with Id: %s", clientId)
 
 	s.clients = append(s.clients, client)
 
-	client.startReceive()
-
-}
-
-func (s *Server) listenToClientEvents() {
-	for {
-		clientMsg := <-s.clientMsgChan
-		s.processClientEvents(clientMsg)
-	}
-}
-
-// this method will listen to event from socket clients
-func (s *Server) processClientEvents(clientMsg clientMessage) {
-
-	// get client
-	client := s.findClientById(clientMsg.clientId)
-
-	if client == nil {
-		log.Errorf("a tcpMessage was published from unknown client with Id: %s", clientMsg.clientId)
-	}
-
-	// parse the tcpMessage
-	msgContext := convertToMessage(clientMsg.payload, client)
-
-	msgType, ok := msgContext.GetMessageType()
-
-	log.Infof("message with type: %s was received", msgType)
-
-	if !ok {
-		log.Errorf("the message doesn't seem to have a valid message type, msg type: %s", msgType)
-		return
-	}
-
-	mh := s.handlers[msgType]
-
-	if mh == nil {
-		log.Errorf("no handler has been registered for type %s", msgType)
-		return
-	}
-
-	mh(msgContext)
-
-}
-
-func (s *Server) findClientById(id string) *socketClient {
-	for _, c := range s.clients {
-		if c.clientId == id {
-			return c
-		}
-	}
-	return nil
 }

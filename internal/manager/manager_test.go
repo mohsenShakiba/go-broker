@@ -19,6 +19,8 @@ func TestFull(t *testing.T) {
 
 	dir, err := ioutil.TempDir("./", "temp")
 
+	log.SetLevel(log.WarnLevel)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestFull(t *testing.T) {
 	go initPublisher(t)
 	go initSubscriber(t)
 
-	time.Sleep(time.Second * 1000)
+	time.Sleep(time.Second * 10)
 }
 
 func initPublisher(t *testing.T) {
@@ -62,7 +64,6 @@ func initPublisher(t *testing.T) {
 		}
 
 		numberOfSentMessages += 1
-		time.Sleep(time.Second)
 	}
 }
 
@@ -86,12 +87,11 @@ func initSubscriber(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not write to server, error: %s", err)
 	}
-	time.Sleep(time.Second * 2)
 
 	go func() {
 		for {
 
-			msg, err := util.Read(subscribeClient, 1024)
+			msg, err := util.Read(subscribeClient, 1024, true)
 			msgMap := make(map[string][]byte)
 
 			if err != nil {
@@ -105,6 +105,9 @@ func initSubscriber(t *testing.T) {
 			partsByNewLine := bytes.Split(msg, newLineB)
 
 			for _, part := range partsByNewLine {
+				if len(part) == 0 {
+					continue
+				}
 				partsByColon := bytes.Split(part, colonB)
 
 				if len(partsByColon) != 2 {
@@ -118,11 +121,11 @@ func initSubscriber(t *testing.T) {
 			msgId := msgMap["msgId"]
 
 			if string(msgType) == "ACK" {
+				t.Logf("received ack")
 			} else {
 				t.Logf("received message with id: %s", msgId)
 			}
 
-			time.Sleep(time.Second)
 		}
 	}()
 

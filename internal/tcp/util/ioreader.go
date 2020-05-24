@@ -1,61 +1,61 @@
 package util
 
 import (
-	"errors"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"strconv"
 )
 
-func Read(i io.Reader, size int) ([]byte, error) {
+func ReadLength(b []byte) (int, error) {
+	msgPartCountStr := string(b)
+	return strconv.Atoi(msgPartCountStr)
+}
 
-	msg := make([]byte, 0, size)
-	buf := make([]byte, size)
-	remainingBytesToRead := 0
-	bytesToReadInit := false
+// Read will read from io based on the message length prefix
+func Read(i io.Reader) ([]byte, bool) {
 
-	for {
-		bytesRead, err := i.Read(buf)
+	msgLength, ok := readMessageLength(i)
 
-		if !bytesToReadInit && bytesRead > 4 {
-			sizeStr := string(buf[:4])
-			remainingBytesToRead, err = strconv.Atoi(sizeStr)
-
-			if err != nil {
-				log.Errorf("the first 4 bytes of message isn't int, first four bytes %s", sizeStr)
-				break
-			}
-
-			bytesToReadInit = true
-
-		}
-
-		msg = append(msg, buf[:bytesRead]...)
-
-		remainingBytesToRead -= bytesRead
-
-		if remainingBytesToRead < 0 {
-			return nil, errors.New("invalid message was sent from client")
-		}
-
-		if remainingBytesToRead == 0 {
-			break
-		}
+	if !ok {
+		log.Errorf("the first 4 bytes of message isn't int, discarding")
+		return nil, false
 	}
 
-	if !bytesToReadInit {
-		return nil, errors.New("couldn't Read due to invalid message format")
-	}
-
-	log.Infof("received message from socket, msg: %s", msg)
-
-	lStr := string(msg[:4])
-	l, err := strconv.Atoi(lStr)
+	b := make([]byte, msgLength)
+	_, err := i.Read(b)
 
 	if err != nil {
-		log.Fatalf("message length is invalid %s", lStr)
-		return nil, err
+		log.Errorf("could not read from socket, discarding")
+		return nil, false
 	}
 
-	return msg[5:l], nil
+	return b, true
+}
+
+// readMessageLength will determine the length of a message
+func readMessageLength(i io.Reader) (int, bool) {
+
+	const messageLength = 5
+
+	// read four bytes
+	b := make([]byte, messageLength)
+	bytesRead, err := i.Read(b)
+
+	if err != nil {
+		return 0, false
+	}
+
+	if bytesRead < messageLength {
+		return 0, false
+	}
+
+	sizeStr := string(b[:messageLength-1])
+
+	length, err := strconv.Atoi(sizeStr)
+
+	if err != nil {
+		return 0, false
+	}
+
+	return length - messageLength, true
 }

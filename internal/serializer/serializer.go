@@ -27,5 +27,27 @@ func (ls *LineSeparatedSerializer) WriteBytes(key string, value []byte) {
 }
 
 func (ls *LineSeparatedSerializer) GetMessagePrefix() string {
-	return fmt.Sprintf("%04d\n", len(ls.Bytes)+5)
+
+	byteCount := 0
+
+	for _, b := range ls.Bytes {
+		byteCount += len(b)
+	}
+
+	return fmt.Sprintf("%04d\n", byteCount+5)
+}
+
+func (ls *LineSeparatedSerializer) GetMessageBytes() []byte {
+
+	byteCount := 0
+	msg := make([]byte, 0)
+
+	for _, b := range ls.Bytes {
+		byteCount += len(b)
+		msg = append(msg, b...)
+	}
+
+	prefix := fmt.Sprintf("%04d\n", byteCount+5)
+
+	return append([]byte(prefix), msg...)
 }
