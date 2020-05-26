@@ -1,6 +1,8 @@
 package queue
 
-import "sync"
+import (
+	"sync"
+)
 
 // Queue is a blocking queue implementation
 // once there are no more items dequeue will block
@@ -42,6 +44,7 @@ func (q *queue) Enqueue(i interface{}) {
 }
 
 func (q *queue) Dequeue() interface{} {
+
 	q.l.Lock()
 
 	if len(q.store) == 0 {
@@ -49,8 +52,13 @@ func (q *queue) Dequeue() interface{} {
 	} else {
 		defer q.l.Unlock()
 	}
+
 	q.l2.Lock()
-	defer q.l2.Unlock()
+	defer func() {
+		if len(q.store) > 0 {
+			q.l2.Unlock()
+		}
+	}()
 
 	i := q.store[0]
 	q.store = q.store[1:]
