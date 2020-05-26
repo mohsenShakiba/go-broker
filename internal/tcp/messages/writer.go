@@ -1,4 +1,4 @@
-package message
+package messages
 
 import (
 	"bufio"
@@ -16,7 +16,7 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 	// if err
 	if err != nil {
-		log.Errorf("could not write message, err: %s", err)
+		log.Errorf("could not write messages, err: %s", err)
 		return false
 	}
 
@@ -28,7 +28,7 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 		// if err
 		if err != nil {
-			log.Errorf("could not write message, err: %s", err)
+			log.Errorf("could not write messages, err: %s", err)
 			return false
 		}
 
@@ -36,7 +36,7 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 		// if err
 		if err != nil {
-			log.Errorf("could not write message, err: %s", err)
+			log.Errorf("could not write messages, err: %s", err)
 			return false
 		}
 
@@ -49,7 +49,7 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 		// if err
 		if err != nil {
-			log.Errorf("could not write message, err: %s", err)
+			log.Errorf("could not write messages, err: %s", err)
 			return false
 		}
 
@@ -57,7 +57,7 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 		// if err
 		if err != nil {
-			log.Errorf("could not write message, err: %s", err)
+			log.Errorf("could not write messages, err: %s", err)
 			return false
 		}
 
@@ -65,7 +65,7 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 		// if err
 		if err != nil {
-			log.Errorf("could not write message, err: %s", err)
+			log.Errorf("could not write messages, err: %s", err)
 			return false
 		}
 	}

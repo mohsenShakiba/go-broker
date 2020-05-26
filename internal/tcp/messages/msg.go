@@ -1,12 +1,10 @@
-package message
+package messages
 
+// Message contain information about an incoming tcp messages
 type Message struct {
 	Type   string
+	MsgId  string
 	Fields map[string][]byte
-}
-
-func (m *Message) ReadMsgId() (string, bool) {
-	return m.ReadStr("msgId")
 }
 
 func (m *Message) ReadStr(key string) (string, bool) {
@@ -27,4 +25,12 @@ func (m *Message) ReadByteArr(key string) ([]byte, bool) {
 	}
 
 	return value, true
+}
+
+func (m *Message) WriteStr(key string, value string) {
+	m.Fields[key] = []byte(value)
+}
+
+func (m *Message) WriteByte(key string, value []byte) {
+	m.Fields[key] = value
 }

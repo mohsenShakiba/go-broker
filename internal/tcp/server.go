@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/message"
 	"net"
 )
 
@@ -13,25 +12,20 @@ type ServerConfig struct {
 	ConnectionPort int32
 }
 
-type ClientMessage struct {
-	Message *message.Message
-	Client  *Client
-}
-
 // Server will start a TCP socket server to accept incoming connections and read the data from the conn
 // the data is then sent to a chanel which is processed by the manager
 type Server struct {
 	config   ServerConfig
 	listener net.Listener
-	handlers map[string]func(msgHandler *ClientMessage)
+	*Multiplexer
 }
 
-// Init will create a new socket server
-func Init(config ServerConfig) *Server {
+// New will create a new socket server
+func New(config ServerConfig) *Server {
 
 	s := &Server{
-		config:   config,
-		handlers: make(map[string]func(msgHandler *ClientMessage)),
+		config:      config,
+		Multiplexer: newMultiplexer(),
 	}
 
 	return s
@@ -64,10 +58,6 @@ func (s *Server) Start() {
 
 }
 
-func (s *Server) RegisterHandler(t string, h func(msg *ClientMessage)) {
-	s.handlers[t] = h
-}
-
 // handleConnection will start accepting connections
 func (s *Server) handleConnection(conn net.Conn) {
 
@@ -87,22 +77,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			return
 		}
 
-		s.processMessage(client, msg)
+		s.process(client, msg)
 	}
-
-}
-
-func (s *Server) processMessage(client *Client, msg *message.Message) {
-
-	handler, ok := s.handlers[msg.Type]
-
-	if !ok {
-		log.Errorf("no handler was found for %s", msg.Type)
-	}
-
-	go handler(&ClientMessage{
-		Message: msg,
-		Client:  client,
-	})
 
 }

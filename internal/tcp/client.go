@@ -3,7 +3,7 @@ package tcp
 import (
 	"bufio"
 	"github.com/google/uuid"
-	"go-broker/internal/message"
+	"go-broker/internal/tcp/messages"
 	"io"
 	"net"
 	"sync"
@@ -34,15 +34,27 @@ func initSocketClient(conn net.Conn) *Client {
 	}
 }
 
-// Read will read an entire message from the socket
-func (c *Client) Read() (*message.Message, bool) {
+// Read will read an entire messages from the socket
+func (c *Client) Read() (*messages.Message, bool) {
 	c.lock.Lock()
 
 	defer func() {
 		c.lock.Unlock()
 	}()
 
-	return message.ReadFromIO(c.reader)
+	return messages.ReadFromIO(c.reader)
+}
+
+// Write will write the messages along with the prefix to the client connection
+func (c *Client) Write(msg *messages.Message) {
+
+	c.lock.Lock()
+
+	defer func() {
+		c.lock.Unlock()
+	}()
+
+	messages.WriteToIO(msg, c.writer)
 }
 
 // Close will close the socket conn
@@ -57,16 +69,4 @@ func (c *Client) Close() error {
 	err := c.conn.Close()
 
 	return err
-}
-
-// Write will write the message along with the prefix to the client connection
-func (c *Client) Write(msg *message.Message) {
-
-	c.lock.Lock()
-
-	defer func() {
-		c.lock.Unlock()
-	}()
-
-	message.WriteToIO(msg, c.writer)
 }

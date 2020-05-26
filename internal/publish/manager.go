@@ -2,16 +2,16 @@ package publish
 
 import (
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/message"
+	"go-broker/internal/manager/messages"
 	"go-broker/internal/tcp"
 	"strings"
 )
 
 type PublisherManager struct {
-	publishedMessageChan chan<- *message.Message
+	publishedMessageChan chan<- *messages.Message
 }
 
-func InitPublisherManager(ch chan<- *message.Message, server *tcp.Server) *PublisherManager {
+func InitPublisherManager(ch chan<- *messages.Message, server *tcp.Server) *PublisherManager {
 
 	receiver := &PublisherManager{
 		publishedMessageChan: ch,
@@ -23,42 +23,42 @@ func InitPublisherManager(ch chan<- *message.Message, server *tcp.Server) *Publi
 	return receiver
 }
 
-func (p *PublisherManager) handlePublishMessage(clientMessage *tcp.ClientMessage) {
+func (p *PublisherManager) handlePublishMessage(clientMessage *tcp.Context) {
 
-	// get message routes
+	// get messages routes
 	msgId, ok := clientMessage.Message.ReadMsgId()
 
 	if !ok {
-		log.Errorf("the published message doesn't have a valid msgId, discarding message")
+		log.Errorf("the published messages doesn't have a valid msgId, discarding messages")
 		return
 	}
 
-	// get message routes
+	// get messages routes
 	routesStr, ok := clientMessage.Message.ReadStr("routes")
 
 	if !ok {
-		log.Errorf("the published message doesn't have a valid route, discarding message")
+		log.Errorf("the published messages doesn't have a valid route, discarding messages")
 		return
 	}
 
-	// get message payload
+	// get messages payload
 	payload, ok := clientMessage.Message.ReadByteArr("payload")
 
 	if !ok {
-		log.Errorf("the published message doesn't have a valid payload, discarding message")
+		log.Errorf("the published messages doesn't have a valid payload, discarding messages")
 		return
 	}
 
-	// parse message routes
+	// parse messages routes
 	routesArr := strings.Split(routesStr, ",")
 
-	log.Infof("sending published message: %s to manager", msgId)
+	log.Infof("sending published messages: %s to manager", msgId)
 
 	p.publishedMessageChan <- msg
 
 	err := msgContext.SendAck()
 
 	if err != nil {
-		log.Errorf("failed to send message ack for id: %s", msgId)
+		log.Errorf("failed to send messages ack for id: %s", msgId)
 	}
 }

@@ -22,11 +22,11 @@ func InitManager(basePath string) (*Manager, error) {
 		ConnectionPort: 8085,
 	}
 
-	// create message chan
-	messageChan := make(chan tcp.ClientMessage)
+	// create messages chan
+	messageChan := make(chan tcp.Context)
 
 	// create socket server
-	socketServer := tcp.Init(socketServerConf, messageChan)
+	socketServer := tcp.New(socketServerConf, messageChan)
 
 	// start socket server
 	socketServer.Start()
@@ -66,7 +66,7 @@ func (m *Manager) processPublishedMessage(publishedChan chan *publish.PublishedM
 	for {
 		msg := <-publishedChan
 
-		log.Infof("publishing message with id %s to subscribers", msg.MsgId)
+		log.Infof("publishing messages with id %s to subscribers", msg.MsgId)
 
 		subChan <- &subscribe.PublishedMessage{
 			MsgId:   msg.MsgId,

@@ -74,7 +74,7 @@ func (s *SubscriberManager) handleSubscribeMessage(msgContext *tcp.MessageContex
 	err := msgContext.SendAck()
 
 	if err != nil {
-		log.Errorf("error while sending ack for subscribe message")
+		log.Errorf("error while sending ack for subscribe messages")
 	}
 
 	client := manager.Subscriber{
@@ -113,14 +113,14 @@ func (s *SubscriberManager) handleAckMessage(msgContext *tcp.MessageContext) {
 	msgId, ok := msgContext.GetMessageId()
 
 	if !ok {
-		log.Errorf("could not read msg id from ack message, discarding")
+		log.Errorf("could not read msg id from ack messages, discarding")
 		return
 	}
 
 	client := s.clientMapping[clientId]
 
 	if client == nil {
-		log.Errorf("a message was received from a client that doesn't seem to exist, discarding")
+		log.Errorf("a messages was received from a client that doesn't seem to exist, discarding")
 		return
 	}
 
@@ -134,14 +134,14 @@ func (s *SubscriberManager) handleNackMessage(msgContext *tcp.MessageContext) {
 	msgId, ok := msgContext.GetMessageId()
 
 	if !ok {
-		log.Errorf("could not read msg id from nack message, discarding")
+		log.Errorf("could not read msg id from nack messages, discarding")
 		return
 	}
 
 	client := s.clientMapping[clientId]
 
 	if client == nil {
-		log.Errorf("a message was received from a client that doesn't seem to exist, discarding")
+		log.Errorf("a messages was received from a client that doesn't seem to exist, discarding")
 		return
 	}
 
@@ -159,9 +159,9 @@ func (s *SubscriberManager) processMessageQueue() {
 }
 
 func (s *SubscriberManager) processMsg(msg *PublishedMessage) {
-	// check which client should receive the message
-	// enqueue the message in the client
-	log.Infof("Submanager, message received from publisher msgId: %s", msg.MsgId)
+	// check which client should receive the messages
+	// enqueue the messages in the client
+	log.Infof("Submanager, messages received from publisher msgId: %s", msg.MsgId)
 	subscriberFound := false
 	for _, msgRoute := range msg.Routes {
 
@@ -176,7 +176,7 @@ func (s *SubscriberManager) processMsg(msg *PublishedMessage) {
 		}
 
 		for _, client := range clients {
-			log.Infof("Submanager, enqueue message with msgId: %s to client %s", msg.MsgId, client.clientId)
+			log.Infof("Submanager, enqueue messages with msgId: %s to client %s", msg.MsgId, client.clientId)
 			client.enqueueMessage(msg)
 			subscriberFound = true
 		}

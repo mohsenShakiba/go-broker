@@ -2,7 +2,7 @@ package manager
 
 import (
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/message"
+	"go-broker/internal/manager/messages"
 	"go-broker/internal/serializer"
 	"go-broker/internal/subscribe"
 	"go-broker/internal/tcp"
@@ -18,9 +18,9 @@ type subscriberConfig struct {
 type Subscriber struct {
 	client           tcp.Client
 	config           subscriberConfig
-	sentMessages     map[string]*message.PublishMessage
+	sentMessages     map[string]*messages.PublishMessage
 	sentMessageCount int
-	queue            []*message.PublishMessage
+	queue            []*messages.PublishMessage
 	mutex            sync.Mutex
 }
 
@@ -39,14 +39,14 @@ func (s *Subscriber) start() {
 			time.Sleep(time.Millisecond * 100)
 		}
 
-		// retrieve message
+		// retrieve messages
 		msg := s.queue[0]
 		s.queue = s.queue[1:]
 
 		// add to sent messages
 		s.sentMessages[msg.MsgId] = msg
 
-		// send message
+		// send messages
 
 	}
 }

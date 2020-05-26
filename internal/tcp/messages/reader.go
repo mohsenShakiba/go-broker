@@ -1,10 +1,10 @@
-package message
+package messages
 
 import (
 	"bufio"
 	"bytes"
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/tcp/util"
+	"strconv"
 )
 
 var spaceSeparator = []byte(" ")
@@ -28,13 +28,15 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 	// check if length of header is valid
 	if len(headerParts) != 2 {
-		log.Errorf("message part count is invalid, msg: %s", string(header))
+		log.Errorf("messages part count is invalid, msg: %s", string(header))
 		return nil, false
 	}
 
-	// message parts
+	// messages parts
 	msgType := string(headerParts[0])
-	msgPartCount, err := util.ReadLength(headerParts[1])
+
+	msgPartCountStr := string(headerParts[1])
+	msgPartCount, err := strconv.Atoi(msgPartCountStr)
 
 	// if can't parse length
 	if err != nil {
@@ -69,7 +71,8 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 		}
 
 		// read length
-		payloadLength, err := util.ReadLength(length)
+		msgPartCountStr := string(length)
+		payloadLength, err := strconv.Atoi(msgPartCountStr)
 
 		// if can't parse length
 		if err != nil {
@@ -91,6 +94,16 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 		msg.Fields[string(key)] = payload
 	}
+
+	// get msg id
+	msgId, ok := msg.Fields["msgId"]
+
+	if !ok {
+		log.Errorf("messge dosn't contain a messages id, discarding")
+		return nil, false
+	}
+
+	msg.MsgId = string(msgId)
 
 	return msg, true
 }
