@@ -2,7 +2,6 @@ package manager
 
 import (
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/manager/messages"
 	"go-broker/internal/serializer"
 	"go-broker/internal/subscribe"
 	"go-broker/internal/tcp"
@@ -18,9 +17,9 @@ type subscriberConfig struct {
 type Subscriber struct {
 	client           tcp.Client
 	config           subscriberConfig
-	sentMessages     map[string]*messages.PublishMessage
+	sentMessages     map[string]*PayloadMessage
 	sentMessageCount int
-	queue            []*messages.PublishMessage
+	queue            []*PayloadMessage
 	mutex            sync.Mutex
 }
 

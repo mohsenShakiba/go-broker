@@ -22,23 +22,16 @@ func InitManager(basePath string) (*Manager, error) {
 		ConnectionPort: 8085,
 	}
 
-	// create messages chan
-	messageChan := make(chan tcp.Context)
-
 	// create socket server
-	socketServer := tcp.New(socketServerConf, messageChan)
+	socketServer := tcp.New(socketServerConf)
 
 	// start socket server
 	socketServer.Start()
 
-	// create publisher
-
-	// create subscriber
-
-	// create manager
-
-	publishMessageChan := make(chan *publish.PublishedMessage)
-	subscriberChan := make(chan *subscribe.PublishedMessage)
+	// register handlers
+	socketServer.RegisterHandler("SUB", handleSubscribeMessage)
+	socketServer.RegisterHandler("PUB", handlePublishMessage)
+	socketServer.RegisterHandler("ACK", handlePublishMessage)
 
 	publisherManager := publish.InitPublisherManager(publishMessageChan, socketServer)
 
