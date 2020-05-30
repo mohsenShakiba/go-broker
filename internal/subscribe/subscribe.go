@@ -190,7 +190,7 @@ func (s *SubscriberManager) processMsg(msg *PublishedMessage) {
 
 func (s *SubscriberManager) setMsgResult(msg *PublishedMessage, result string) {
 	//s.messageResultChan <- &MessageResult{
-	//	MsgId:  msg.MsgId,
+	//	Id:  msg.Id,
 	//	Result: result,
 	//}
 }

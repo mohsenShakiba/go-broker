@@ -1,12 +1,9 @@
 package manager
 
 import (
-	log "github.com/sirupsen/logrus"
-	"go-broker/internal/serializer"
-	"go-broker/internal/subscribe"
+	"go-broker/internal/manager/internal/queue"
+	"go-broker/internal/manager/internal/rate_controller"
 	"go-broker/internal/tcp"
-	"sync"
-	"time"
 )
 
 type subscriberConfig struct {
@@ -14,13 +11,20 @@ type subscriberConfig struct {
 	routes                    []string
 }
 
+func NewSubscriber(c *tcp.Client, config subscriberConfig) *Subscriber {
+	return &Subscriber{
+		client:      c,
+		config:      config,
+		queue:       queue.New(),
+		rController: rate_controller.New(config.maxConcurrentMessageCount),
+	}
+}
+
 type Subscriber struct {
-	client           tcp.Client
-	config           subscriberConfig
-	sentMessages     map[string]*PayloadMessage
-	sentMessageCount int
-	queue            []*PayloadMessage
-	mutex            sync.Mutex
+	client      *tcp.Client
+	config      subscriberConfig
+	queue       queue.Queue
+	rController rate_controller.RateController
 }
 
 // start will start sending messages from the queue
@@ -28,77 +32,26 @@ func (s *Subscriber) start() {
 
 	for {
 
-		// sleep if no messages are in the queue
-		if len(s.queue) == 0 {
-			time.Sleep(time.Millisecond * 100)
-		}
-
-		// if sentMessageCount is equal to config maxConcurrentMessageCount
-		if s.sentMessageCount >= s.config.maxConcurrentMessageCount {
-			time.Sleep(time.Millisecond * 100)
-		}
-
 		// retrieve messages
-		msg := s.queue[0]
-		s.queue = s.queue[1:]
+		item := s.queue.Dequeue()
 
-		// add to sent messages
-		s.sentMessages[msg.MsgId] = msg
+		// convert to payload
+		msg := item.(PayloadMessage)
 
-		// send messages
+		// pass it through the rate controller
+		s.rController.WaitOne(msg.Id)
 
 	}
 }
 
-func (s *Subscriber) enqueueMessage(message *subscribe.PublishedMessage) {
-	s.queue = append(s.queue, message)
+func (s *Subscriber) OnAck(msgId string) {
+	s.rController.ReleaseOne(msgId)
 }
 
-func (s *Subscriber) onMessageAck(msgId string) {
-	msg := s.sendMessageMap[msgId]
-
-	if msg != nil {
-		delete(s.sendMessageMap, msgId)
-		s.concurrentMsgCount -= 1
-	}
+func (s *Subscriber) OnNack(msgId string) {
+	s.rController.ReleaseOne(msgId)
 }
 
-func (s *Subscriber) onMessageNack(msgId string) {
-	msg := s.sendMessageMap[msgId]
-
-	if msg != nil {
-		delete(s.sendMessageMap, msgId)
-		s.concurrentMsgCount -= 1
-	}
-}
-
-func (s *Subscriber) sendPendingMessages() {
-	for {
-		if s.concurrentMsgCount <= 0 {
-			continue
-		}
-		if len(s.queue) == 0 {
-			return
-		}
-		s.concurrentMsgCount += 1
-
-		msg := s.queue[0]
-		s.queue = s.queue[1:]
-
-		s.sendMessageMap[msg.MsgId] = msg
-
-		ser := serializer.NewLineSeparatedSerializer()
-
-		ser.WriteStr("msgId", msg.MsgId)
-		ser.WriteBytes("payload", msg.Payload)
-
-		err := s.server.SendToClient(s.clientId, ser.GetMessageBytes())
-
-		if err != nil {
-			log.Errorf("error while sending to subscriber, err: %s", err)
-		}
-
-		log.Infof("Subscriber, sent msg with id: %s to client %s", msg.MsgId, s.clientId)
-
-	}
+func (s *Subscriber) OnMessage(message PayloadMessage) {
+	s.queue.Enqueue(message)
 }

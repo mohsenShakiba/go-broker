@@ -2,17 +2,15 @@ package manager
 
 import (
 	log "github.com/sirupsen/logrus"
-	"go-broker/internal/publish"
 	"go-broker/internal/storage"
 	"go-broker/internal/subscribe"
 	"go-broker/internal/tcp"
 )
 
 type Manager struct {
-	socketServer      *tcp.Server
-	publisherManager  *publish.PublisherManager
-	subscriberManager *subscribe.SubscriberManager
-	storage           *storage.Storage
+	socketServer *tcp.Server
+	storage      *storage.Storage
+	router       *Router
 }
 
 func InitManager(basePath string) (*Manager, error) {
@@ -33,21 +31,20 @@ func InitManager(basePath string) (*Manager, error) {
 	socketServer.RegisterHandler("PUB", handlePublishMessage)
 	socketServer.RegisterHandler("ACK", handlePublishMessage)
 
-	publisherManager := publish.InitPublisherManager(publishMessageChan, socketServer)
+	// init router
+	router := NewRouter()
 
-	subscriberManager := subscribe.InitSubscriberManager(socketServer, subscriberChan)
-
-	storage, err := storage.Init(basePath)
+	// init storage
+	s, err := storage.Init(basePath)
 
 	if err != nil {
 		return nil, err
 	}
 
 	mgr := &Manager{
-		socketServer:      socketServer,
-		publisherManager:  publisherManager,
-		subscriberManager: subscriberManager,
-		storage:           storage,
+		socketServer: socketServer,
+		storage:      s,
+		router:       router,
 	}
 
 	go mgr.processPublishedMessage(publishMessageChan, subscriberChan)
