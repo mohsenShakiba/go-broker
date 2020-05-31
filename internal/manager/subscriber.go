@@ -7,8 +7,8 @@ import (
 )
 
 type subscriberConfig struct {
-	maxConcurrentMessageCount int
-	routes                    []string
+	parallelism int
+	routes      []string
 }
 
 func NewSubscriber(c *tcp.Client, config subscriberConfig) *Subscriber {
@@ -16,7 +16,7 @@ func NewSubscriber(c *tcp.Client, config subscriberConfig) *Subscriber {
 		client:      c,
 		config:      config,
 		queue:       queue.New(),
-		rController: rate_controller.New(config.maxConcurrentMessageCount),
+		rController: rate_controller.New(config.parallelism),
 	}
 }
 

@@ -1,10 +1,20 @@
 package messages
 
+import "strconv"
+
 // Message contain information about an incoming tcp messages
 type Message struct {
 	Type   string
 	MsgId  string
 	Fields map[string][]byte
+}
+
+func NewMessage(t string, msgId string) *Message {
+	return &Message{
+		Type:   t,
+		MsgId:  msgId,
+		Fields: make(map[string][]byte),
+	}
 }
 
 func (m *Message) ReadStr(key string) (string, bool) {
@@ -15,6 +25,23 @@ func (m *Message) ReadStr(key string) (string, bool) {
 	}
 
 	return string(value), true
+}
+
+func (m *Message) ReadInt(key string) (int, bool) {
+
+	val, ok := m.ReadStr(key)
+
+	if !ok {
+		return 0, ok
+	}
+
+	intVal, err := strconv.Atoi(val)
+
+	if err != nil {
+		return 0, false
+	}
+
+	return intVal, true
 }
 
 func (m *Message) ReadByteArr(key string) ([]byte, bool) {
