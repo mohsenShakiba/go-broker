@@ -8,7 +8,7 @@ import (
 
 type fileHandler struct {
 	path string
-	lock sync.Mutex
+	lock sync.RWMutex
 }
 
 func (fh *fileHandler) readAllEntries() ([]entry, error) {
@@ -52,7 +52,25 @@ func (fh *fileHandler) readAllEntries() ([]entry, error) {
 }
 
 func (fh *fileHandler) readPayload(e entry) ([]byte, error) {
+	fh.lock.RLock()
+	defer fh.lock.RUnlock()
 
+	// read the file content
+	handler, err := os.Open(fh.path)
+	defer handler.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	b := make([]byte, e.length)
+	_, err = handler.ReadAt(b, e.offset+18)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 func (fh *fileHandler) write(id uint64, payload []byte) (entry, error) {

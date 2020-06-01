@@ -7,6 +7,7 @@ type entry struct {
 	id      uint64
 	length  uint64
 	offset  int64
+	pageNo  int
 }
 
 func toBinary(e entry) []byte {
