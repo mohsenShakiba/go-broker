@@ -54,6 +54,12 @@ func TestStorage(t *testing.T) {
 
 	defer s2.Dispose()
 
+	err = s2.Init()
+
+	if err != nil {
+		t.Fatalf("initializing the storage failed with error: %s", err)
+	}
+
 	res, err := s2.Read(id)
 
 	if err != nil {

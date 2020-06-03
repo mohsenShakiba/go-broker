@@ -116,7 +116,7 @@ func (fh *fileHandler) readPayload(e *entry) ([]byte, error) {
 	}
 
 	b := make([]byte, e.length)
-	_, err = handler.ReadAt(b, e.offset+18)
+	_, err = handler.ReadAt(b, e.offset+20)
 
 	if err != nil {
 		return nil, err
@@ -139,12 +139,6 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 			offset:        0,
 			activeEntries: 0,
 			fh:            nil,
-		}
-
-		err := p.createIfNeeded()
-
-		if err != nil {
-			return nil, err
 		}
 
 		fh.pages[fh.currentPageIndex] = p

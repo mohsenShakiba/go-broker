@@ -12,23 +12,12 @@ type page struct {
 	fh            *os.File
 }
 
-// init will create the file if it doesn't exist,
-func (p *page) createIfNeeded() error {
-	if _, err := os.Stat(p.path); os.IsNotExist(err) {
-		_, err = os.OpenFile(p.path, os.O_CREATE|os.O_RDWR, 0644)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (p *page) fileHandler() (*os.File, error) {
 	if p.fh != nil {
 		return p.fh, nil
 	}
 
-	fh, err := os.Open(p.path)
+	fh, err := os.OpenFile(p.path, os.O_CREATE|os.O_RDWR, 0644)
 
 	if err != nil {
 		return nil, err
