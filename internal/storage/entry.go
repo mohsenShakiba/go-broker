@@ -11,7 +11,7 @@ type entry struct {
 }
 
 func toBinary(e *entry) []byte {
-	totalSize := 8*2 + 2
+	totalSize := 20
 	b := make([]byte, totalSize)
 	binary.LittleEndian.PutUint16(b[:2], uint16(e.deleted))
 	binary.LittleEndian.PutUint64(b[2:10], uint64(e.id))

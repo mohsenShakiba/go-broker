@@ -1,6 +1,9 @@
 package storage
 
-import "os"
+import (
+	log "github.com/sirupsen/logrus"
+	"os"
+)
 
 type page struct {
 	path          string
@@ -12,7 +15,7 @@ type page struct {
 // init will create the file if it doesn't exist,
 func (p *page) createIfNeeded() error {
 	if _, err := os.Stat(p.path); os.IsNotExist(err) {
-		_, err = os.Create(p.path)
+		_, err = os.OpenFile(p.path, os.O_CREATE|os.O_RDWR, 0644)
 		if err != nil {
 			return err
 		}
@@ -38,6 +41,10 @@ func (p *page) fileHandler() (*os.File, error) {
 
 func (p *page) close() {
 	if p.fh != nil {
-		_ = p.fh.Close()
+		err := p.fh.Close()
+
+		if err != nil {
+			log.Errorf("failed to close file handler, error: %s", err)
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"time"
 )
 
@@ -9,13 +10,14 @@ type Storage interface {
 	Write(id int64, payload []byte) error
 	Read(id int64) ([]byte, error)
 	Delete(id int64) error
+	Dispose()
 }
 
 type StorageConfig struct {
 	Path           string
 	SyncPeriod     time.Duration
 	FileMaxSize    int64
-	FIleNamePrefix string
+	FileNamePrefix string
 }
 
 func New(cng StorageConfig) Storage {
@@ -48,10 +50,32 @@ func (s *storage) Init() error {
 	return nil
 }
 
+func (s *storage) Write(id int64, payload []byte) error {
+	e, err := s.handler.write(id, payload)
+	s.entryMap[id] = e
+	return err
+}
+
 func (s *storage) Read(id int64) ([]byte, error) {
 	e := s.entryMap[id]
 
-	if e
+	if e == nil {
+		return nil, errors.New("entry not found")
+	}
 
-	return s.handler.readPayload()
+	return s.handler.readPayload(e)
+}
+
+func (s *storage) Delete(id int64) error {
+	e := s.entryMap[id]
+
+	if e == nil {
+		return errors.New("entry not found")
+	}
+
+	return s.handler.delete(e)
+}
+
+func (s *storage) Dispose() {
+	s.handler.dispose()
 }

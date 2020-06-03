@@ -43,9 +43,9 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 	entries := make([]*entry, 0, 1024)
 
 	for _, f := range files {
-		if strings.Contains(f.Name(), fh.conf.FIleNamePrefix) {
+		if strings.Contains(f.Name(), fh.conf.FileNamePrefix) {
 
-			pageIndexStr := strings.Replace(f.Name(), fh.conf.FIleNamePrefix, "", 1)
+			pageIndexStr := strings.Replace(f.Name(), fh.conf.FileNamePrefix, "", 1)
 
 			pageIndex, err := strconv.Atoi(pageIndexStr)
 
@@ -65,7 +65,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 			}
 
 			var off int64 = 0
-			b := make([]byte, 0, 18)
+			b := make([]byte, 20)
 			blen := int64(18)
 			pageEntries := make([]*entry, 0, 1024)
 
@@ -83,7 +83,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 				entry := fromBinary(b)
 
 				entry.offset = off
-				off += blen + int64(entry.length)
+				off += blen + entry.length
 
 				pageEntries = append(pageEntries, entry)
 			}
@@ -128,13 +128,13 @@ func (fh *fileHandler) readPayload(e *entry) ([]byte, error) {
 func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 	p := fh.currentPage
 
-	if fh.currentPage.offset >= fh.conf.FileMaxSize {
+	if fh.currentPage == nil || fh.currentPage.offset >= fh.conf.FileMaxSize {
 
 		fh.currentPageIndex += 1
-		newPName := fmt.Sprintf("%s%d", fh.conf.FIleNamePrefix, fh.currentPageIndex)
+		newPName := fmt.Sprintf("%s%d", fh.conf.FileNamePrefix, fh.currentPageIndex)
 		newPPath := path.Join(fh.conf.Path, newPName)
 
-		p := &page{
+		p = &page{
 			path:          newPPath,
 			offset:        0,
 			activeEntries: 0,
@@ -167,10 +167,10 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 
 	b := toBinary(entry)
 
-	_, _ = h.WriteAt(b, p.offset)
+	_, err = h.WriteAt(b, p.offset)
 	p.offset += int64(len(b))
 
-	_, _ = h.WriteAt(payload, p.offset)
+	_, err = h.WriteAt(payload, p.offset)
 	p.offset += int64(len(payload))
 
 	return entry, nil
@@ -194,4 +194,10 @@ func (fh *fileHandler) delete(entry *entry) error {
 	}
 
 	return nil
+}
+
+func (fh *fileHandler) dispose() {
+	for _, p := range fh.pages {
+		p.close()
+	}
 }
