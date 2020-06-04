@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type fileHandler struct {
@@ -115,6 +116,8 @@ func (fh *fileHandler) readPayload(e *entry) ([]byte, error) {
 		return nil, err
 	}
 
+	defer handler.Close()
+
 	b := make([]byte, e.length)
 	_, err = handler.ReadAt(b, e.offset+20)
 
@@ -159,12 +162,24 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 		return nil, err
 	}
 
+	defer h.Close()
+
 	b := toBinary(entry)
 
 	_, err = h.WriteAt(b, p.offset)
+
+	if err != nil {
+		return nil, err
+	}
+
 	p.offset += int64(len(b))
 
 	_, err = h.WriteAt(payload, p.offset)
+
+	if err != nil {
+		return nil, err
+	}
+
 	p.offset += int64(len(payload))
 
 	return entry, nil
@@ -179,12 +194,19 @@ func (fh *fileHandler) delete(entry *entry) error {
 		return err
 	}
 
+	defer h.Close()
+
 	b := make([]byte, 2)
 	binary.LittleEndian.PutUint16(b, 0)
-	_, err = h.WriteAt(b, entry.offset)
 
-	if err != nil {
-		return err
+	for {
+		_, err = h.WriteAt(b, entry.offset)
+
+		if err != nil {
+			time.Sleep(time.Second)
+		} else {
+			break
+		}
 	}
 
 	return nil

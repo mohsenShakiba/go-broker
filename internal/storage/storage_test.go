@@ -4,11 +4,12 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 func TestStorage(t *testing.T) {
 
-	basePath := path.Join("C:\\Users\\m.shakiba.PSZ021-PC\\Desktop", "_tmp")
+	basePath := path.Join("C:\\Users\\m.shakiba.PSZ021-PC\\Downloads\\_tmp")
 
 	err := os.Mkdir(basePath, os.ModeDir)
 
@@ -18,10 +19,13 @@ func TestStorage(t *testing.T) {
 	}
 
 	defer func() {
+
+		time.Sleep(time.Second)
+
 		err := os.RemoveAll(basePath)
 
 		if err != nil {
-			//t.Fatalf("failed to delete path")
+			t.Fatalf("failed to delete path")
 		}
 	}()
 
@@ -32,7 +36,7 @@ func TestStorage(t *testing.T) {
 	}
 
 	s := New(conf)
-	defer s.Dispose()
+	//defer s.Dispose()
 
 	err = s.Init()
 
@@ -49,10 +53,10 @@ func TestStorage(t *testing.T) {
 		t.Fatalf("writing to storage failed with error: %s", err)
 	}
 
+	time.Sleep(time.Second)
+
 	// recreating the storage
 	s2 := New(conf)
-
-	defer s2.Dispose()
 
 	err = s2.Init()
 
@@ -69,4 +73,29 @@ func TestStorage(t *testing.T) {
 	if string(res) != val {
 		t.Fatalf("failed to read data from storage, %s != %s", string(res), val)
 	}
+
+	// make sure the entry is actually deleted
+
+	time.Sleep(time.Second)
+
+	s3 := New(conf)
+
+	err = s3.Init()
+
+	if err != nil {
+		t.Fatalf("initializing the storage failed with error: %s", err)
+	}
+
+	err = s3.Delete(1)
+
+	if err != nil {
+		t.Fatalf("failed to delete the entry, error: %s", err)
+	}
+
+	_, err = s3.Read(id)
+
+	if err == nil {
+		t.Fatalf("the entry should be deleted, error: %s", err)
+	}
+
 }

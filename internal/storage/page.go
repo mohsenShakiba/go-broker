@@ -17,7 +17,7 @@ func (p *page) fileHandler() (*os.File, error) {
 		return p.fh, nil
 	}
 
-	fh, err := os.OpenFile(p.path, os.O_CREATE|os.O_RDWR, 0644)
+	fh, err := os.OpenFile(p.path, os.O_CREATE|os.O_RDWR, 0777)
 
 	if err != nil {
 		return nil, err

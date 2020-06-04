@@ -67,11 +67,13 @@ func (s *storage) Read(id int64) ([]byte, error) {
 }
 
 func (s *storage) Delete(id int64) error {
-	e := s.entryMap[id]
+	e, ok := s.entryMap[id]
 
-	if e == nil {
+	if !ok {
 		return errors.New("entry not found")
 	}
+
+	delete(s.entryMap, id)
 
 	return s.handler.delete(e)
 }
