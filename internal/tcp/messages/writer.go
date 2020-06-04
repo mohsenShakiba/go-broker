@@ -9,7 +9,7 @@ import (
 func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 	// create header
-	header := fmt.Sprintf("%s %d", msg.Type, len(msg.Fields))
+	header := fmt.Sprintf("%s %d\n", msg.Type, len(msg.Fields))
 
 	// write header
 	_, err := w.Write([]byte(header))

@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net"
 )
@@ -40,35 +39,33 @@ func (s *Server) Start() {
 		log.Fatalf("couldn't listen on specified port, err: %s", err)
 	}
 
-	defer listener.Close()
-
 	log.Infof("started listening on port %d", s.config.ConnectionPort)
 
-	for {
+	go func() {
 
-		c, err := listener.Accept()
+		defer listener.Close()
 
-		if err != nil {
-			log.Errorf("error while accepting conn, err: %s", err)
-			continue
+		for {
+
+			c, err := listener.Accept()
+
+			if err != nil {
+				log.Errorf("error while accepting conn, err: %s", err)
+				continue
+			}
+
+			go s.handleConnection(c)
 		}
-
-		go s.handleConnection(c)
-	}
+	}()
 
 }
 
 // handleConnection will start accepting connections
 func (s *Server) handleConnection(conn net.Conn) {
 
-	clientId := uuid.New()
+	client := initSocketClient(conn)
 
-	client := &Client{
-		ClientId: clientId.String(),
-		conn:     conn,
-	}
-
-	log.Infof("added a new client with Id: %s", clientId)
+	log.Infof("added a new client with Id: %s", client.ClientId)
 
 	for {
 		msg, ok := client.Read()

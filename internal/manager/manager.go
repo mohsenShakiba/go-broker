@@ -7,7 +7,7 @@ import (
 
 type Manager struct {
 	socketServer *tcp.Server
-	storage      *storage.Storage
+	storage      storage.Storage
 	router       *Router
 }
 
@@ -24,16 +24,19 @@ func InitManager(basePath string) (*Manager, error) {
 	// start socket server
 	socketServer.Start()
 
-	// register handlers
-	socketServer.RegisterHandler("SUB", handleSubscribeMessage)
-	socketServer.RegisterHandler("PUB", handlePublishMessage)
-	socketServer.RegisterHandler("ACK", handlePublishMessage)
-
 	// init router
 	router := NewRouter()
 
+	storageConfig := storage.StorageConfig{
+		Path:           "C:\\Users\\m.shakiba.PSZ021-PC\\Desktop\\data",
+		FileMaxSize:    1024,
+		FileNamePrefix: "go",
+	}
+
 	// init storage
-	s, err := storage.Init(basePath)
+	s := storage.New(storageConfig)
+
+	err := s.Init()
 
 	if err != nil {
 		return nil, err
@@ -45,5 +48,18 @@ func InitManager(basePath string) (*Manager, error) {
 		router:       router,
 	}
 
+	// register handlers
+	socketServer.RegisterHandler("SUB", mgr.handleSubscribeMessage)
+	socketServer.RegisterHandler("PUB", mgr.handlePublishMessage)
+	socketServer.RegisterHandler("ACK", mgr.handlePublishMessage)
+
 	return mgr, nil
+}
+
+func (m *Manager) processMessage(p *PayloadMessage) {
+	subscribers := m.router.Match(p.Routes)
+
+	for _, s := range subscribers {
+		s.OnMessage(p)
+	}
 }

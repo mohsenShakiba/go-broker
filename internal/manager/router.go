@@ -1,7 +1,5 @@
 package manager
 
-import "go-broker/internal/tcp"
-
 // Router is in charge of routing incoming messages to appropriate subscribers
 //based on the message and subscriber routes
 type Router struct {
@@ -10,26 +8,32 @@ type Router struct {
 
 func NewRouter() *Router {
 	return &Router{
-		Routes: make([]Route, 0),
+		Routes: make([]*Route, 0),
 	}
 }
 
-func (r Router) AddRoute(path string, client *tcp.Client) {
-	route := &Route{
-		Path:     path,
-		segments: ProcessPath(path),
-		cache:    make(map[string]bool),
-		Client:   client,
+func (r Router) AddRoute(routes []string, client *Subscriber) {
+
+	for _, route := range routes {
+		route := &Route{
+			Path:       route,
+			segments:   ProcessPath(route),
+			cache:      make(map[string]bool),
+			subscriber: client,
+		}
+		r.Routes = append(r.Routes, route)
 	}
-	r.Routes = append(r.Routes, route)
+
 }
 
-func (r *Router) Match(path string) []*tcp.Client {
-	clients := make([]*tcp.Client, 0)
+func (r *Router) Match(path []string) map[string]*Subscriber {
+	clients := make(map[string]*Subscriber, 0)
 
 	for _, r := range r.Routes {
-		if r.DoesMatch(path) {
-			clients = append(clients, r.Client)
+		for _, p := range path {
+			if r.DoesMatch(p) {
+				clients[r.subscriber.client.ClientId] = r.subscriber
+			}
 		}
 	}
 

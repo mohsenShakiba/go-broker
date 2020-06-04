@@ -52,6 +52,6 @@ func (s *Subscriber) OnNack(msgId string) {
 	s.rController.ReleaseOne(msgId)
 }
 
-func (s *Subscriber) OnMessage(message PayloadMessage) {
+func (s *Subscriber) OnMessage(message *PayloadMessage) {
 	s.queue.Enqueue(message)
 }

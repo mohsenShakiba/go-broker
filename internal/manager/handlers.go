@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func handleSubscribeMessage(ctx *tcp.Context) {
+func (m *Manager) handleSubscribeMessage(ctx *tcp.Context) {
 	// read the message
 	parallelism, ok := ctx.Message.ReadInt("dop")
 
@@ -30,15 +30,44 @@ func handleSubscribeMessage(ctx *tcp.Context) {
 
 	subscriber := NewSubscriber(ctx.Client, subConfig)
 
+	m.router.AddRoute(routes, subscriber)
+
 	// send ack
 	ctx.SendAck()
 
 }
 
-func handlePublishMessage(ctx *tcp.Context) {
+func (m *Manager) handlePublishMessage(ctx *tcp.Context) {
+	// read the message
+	payloadContent, ok := ctx.Message.ReadByteArr("payload")
+
+	if !ok {
+		ctx.SendErr("INVALID_PARAM")
+		return
+	}
+
+	routesStr, ok := ctx.Message.ReadStr("routes")
+
+	if !ok {
+		ctx.SendErr("INVALID_PARAM")
+		return
+	}
+
+	routes := strings.Split(routesStr, ",")
+
+	p := &PayloadMessage{
+		Id:      ctx.Message.MsgId,
+		Routes:  routes,
+		Payload: payloadContent,
+	}
+
+	m.processMessage(p)
+}
+
+func (m *Manager) handleAck(ctx *tcp.Context) {
 
 }
 
-func handlePublishMessage(ctx *tcp.Context) {
+func (m *Manager) handleNack(ctx *tcp.Context) {
 
 }

@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"go-broker/internal/tcp"
 	"strings"
 )
 
@@ -14,10 +13,10 @@ import (
 // bar/*/* is the same as simply bar
 
 type Route struct {
-	Path     string
-	segments []string
-	cache    map[string]bool
-	Client   *tcp.Client
+	Path       string
+	segments   []string
+	cache      map[string]bool
+	subscriber *Subscriber
 }
 
 func ProcessPath(path string) []string {

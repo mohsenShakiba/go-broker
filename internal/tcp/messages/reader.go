@@ -54,6 +54,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 		// read key
 		key, err := r.ReadSlice(' ')
+		key = key[:len(key)-1]
 
 		// if error
 		if err != nil {
@@ -63,6 +64,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 		// read space 2
 		length, err := r.ReadSlice(' ')
+		length = length[:len(length)-1]
 
 		// if error
 		if err != nil {
@@ -99,7 +101,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 	msgId, ok := msg.Fields["msgId"]
 
 	if !ok {
-		log.Errorf("messge dosn't contain a messages id, discarding")
+		log.Errorf("message doesn't contain a messages id, discarding")
 		return nil, false
 	}
 

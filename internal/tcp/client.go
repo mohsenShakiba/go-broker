@@ -13,12 +13,12 @@ const (
 	bufferSize = 1024
 )
 
-// Client is in charge of reading the data from the conn
+// subscriber is in charge of reading the data from the conn
 // and sending data to connecting using the default protocol
 type Client struct {
 	ClientId string
-	reader   *bufio.Reader
-	writer   *bufio.Writer
+	Reader   *bufio.Reader
+	Writer   *bufio.Writer
 	conn     io.ReadWriteCloser
 	lock     sync.Mutex
 }
@@ -27,8 +27,8 @@ type Client struct {
 func initSocketClient(conn net.Conn) *Client {
 	return &Client{
 		ClientId: uuid.New().String(),
-		reader:   bufio.NewReaderSize(conn, bufferSize),
-		writer:   bufio.NewWriterSize(conn, bufferSize),
+		Reader:   bufio.NewReader(conn),
+		Writer:   bufio.NewWriter(conn),
 		conn:     conn,
 		lock:     sync.Mutex{},
 	}
@@ -42,7 +42,7 @@ func (c *Client) Read() (*messages.Message, bool) {
 		c.lock.Unlock()
 	}()
 
-	return messages.ReadFromIO(c.reader)
+	return messages.ReadFromIO(c.Reader)
 }
 
 // Write will write the messages along with the prefix to the client connection
@@ -54,7 +54,7 @@ func (c *Client) Write(msg *messages.Message) {
 		c.lock.Unlock()
 	}()
 
-	messages.WriteToIO(msg, c.writer)
+	messages.WriteToIO(msg, c.Writer)
 }
 
 // Close will close the socket conn

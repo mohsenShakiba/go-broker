@@ -12,7 +12,6 @@ type RateController interface {
 func New(parallelism int) RateController {
 	c := &waitGroupRateController{
 		parallelism: parallelism,
-		c:           parallelism,
 		kmap:        make(map[string]bool),
 	}
 
