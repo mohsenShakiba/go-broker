@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type fileHandler struct {
@@ -67,7 +67,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 
 			var off int64 = 0
 			b := make([]byte, 20)
-			blen := int64(18)
+			blen := int64(20)
 			pageEntries := make([]*entry, 0, 1024)
 
 			for {
@@ -86,7 +86,10 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 				entry.offset = off
 				off += blen + entry.length
 
-				pageEntries = append(pageEntries, entry)
+				if entry.deleted == 0 {
+					pageEntries = append(pageEntries, entry)
+				}
+
 			}
 
 			p := &page{
@@ -186,6 +189,11 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 }
 
 func (fh *fileHandler) delete(entry *entry) error {
+
+	if entry == nil {
+		return errors.New("entry not found")
+	}
+
 	p := fh.pages[int(entry.pageNo)]
 
 	h, err := p.fileHandler()
@@ -197,19 +205,10 @@ func (fh *fileHandler) delete(entry *entry) error {
 	defer h.Close()
 
 	b := make([]byte, 2)
-	binary.LittleEndian.PutUint16(b, 0)
+	binary.LittleEndian.PutUint16(b, 1)
 
-	for {
-		_, err = h.WriteAt(b, entry.offset)
-
-		if err != nil {
-			time.Sleep(time.Second)
-		} else {
-			break
-		}
-	}
-
-	return nil
+	_, err = h.WriteAt(b, entry.offset)
+	return err
 }
 
 func (fh *fileHandler) dispose() {

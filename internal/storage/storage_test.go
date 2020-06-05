@@ -7,9 +7,77 @@ import (
 	"time"
 )
 
+func TestStorageFile(t *testing.T) {
+	basePath := path.Join("C:\\Users\\user\\Desktop")
+
+	//fh1, err := os.OpenFile(basePath, os.O_RDWR, 0777)
+	//
+	//b := make([]byte, 20)
+	//fh1.Read(b)
+	//
+	//e := fromBinary(b)
+	//
+	//fh, err := os.OpenFile(basePath, os.O_RDWR, 0777)
+	//
+	//if err != nil {
+	//	t.Fatalf("failed to open the file, err: %s", err)
+	//}
+	//
+	//if e == nil {
+	//	t.Fatalf("failed to read binary")
+	//}
+	//
+	//_, err = fh.WriteAt([]byte("test"),20)
+	//
+	//if err != nil {
+	//	t.Fatalf("failed to write to file, err: %s", err)
+	//}
+
+	conf := StorageConfig{
+		Path:           basePath,
+		FileMaxSize:    100,
+		FileNamePrefix: "tf_",
+	}
+
+	s := New(conf)
+	//defer s.Dispose()
+
+	err := s.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s.Write(1, []byte("test"))
+	s.Write(2, []byte("test2"))
+	s.Write(3, []byte("test3"))
+
+	e, err := s.Read(1)
+
+	if err != nil {
+		t.Fatalf("the entry wasn't found")
+	}
+
+	t.Logf("e has id %s", e)
+
+	s.Delete(1)
+
+}
+
+func TestWrite(t *testing.T) {
+
+}
+
+func TestRead(t *testing.T) {
+
+}
+
+func TestDelete(t *testing.T) {
+
+}
+
 func TestStorage(t *testing.T) {
 
-	basePath := path.Join("C:\\Users\\m.shakiba.PSZ021-PC\\Downloads\\_tmp")
+	basePath := path.Join("C:\\Users\\user\\Desktop\\tmp")
 
 	err := os.Mkdir(basePath, os.ModeDir)
 
