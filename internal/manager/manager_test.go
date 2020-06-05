@@ -29,8 +29,11 @@ func TestFull(t *testing.T) {
 		t.Fatalf("error while creating manager, error: %s", err)
 	}
 
-	//go initPublisher(t)
 	go initSubscriber(t)
+
+	time.Sleep(time.Second)
+
+	go initPublisher(t)
 
 	time.Sleep(time.Second * 100000)
 }
@@ -47,7 +50,7 @@ func initPublisher(t *testing.T) {
 		msg.WriteStr("routes", "r1")
 		msg.WriteStr("payload", string(numberOfSentMessages))
 
-		writer := bufio.NewWriter(publisherClient)
+		writer := bufio.NewWriterSize(publisherClient, 1)
 
 		ok := messages.WriteToIO(msg, writer)
 
@@ -66,7 +69,8 @@ func initPublisher(t *testing.T) {
 func initSubscriber(t *testing.T) {
 
 	subscribeClient, err := net.Dial("tcp", "127.0.0.1:8085")
-	writer := bufio.NewWriter(subscribeClient)
+	writer := bufio.NewWriterSize(subscribeClient, 1)
+	reader := bufio.NewReaderSize(subscribeClient, 1)
 
 	if err != nil {
 		t.Fatalf("could not establish client connection")
@@ -76,10 +80,7 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := messages.NewMessage("SUB", "-")
 	subMsg.WriteStr("routes", "r1")
-
-	written, err := writer.Write([]byte("fdsfsd\n"))
-
-	t.Logf("written %d", written)
+	subMsg.WriteStr("dop", "10")
 
 	ok := messages.WriteToIO(subMsg, writer)
 
@@ -87,27 +88,30 @@ func initSubscriber(t *testing.T) {
 		t.Fatalf("could not write to server")
 	}
 
-	//// read the subscription result
-	//subResMsg, ok := messages.ReadFromIO(reader)
-	//
-	//if !ok {
-	//	t.Fatalf("could not read from server")
-	//}
-	//
-	//if subResMsg.Type != "ACK" {
-	//	t.Fatalf("the message type must be ack")
-	//}
-	//
-	//go func() {
-	//	for {
-	//		publishedMsg, ok := messages.ReadFromIO(reader)
-	//
-	//		if !ok {
-	//			t.Fatalf("could not read from server")
-	//		}
-	//
-	//		t.Logf("received message with id: %s", publishedMsg.MsgId)
-	//	}
-	//}()
+	writer.Flush()
+
+	go func() {
+
+		// read the subscription result
+		subResMsg, ok := messages.ReadFromIO(reader)
+
+		if !ok {
+			t.Fatalf("could not read from server")
+		}
+
+		if subResMsg.Type != "ACK" {
+			t.Fatalf("the message type must be ack")
+		}
+
+		for {
+			publishedMsg, ok := messages.ReadFromIO(reader)
+
+			if !ok {
+				t.Fatalf("could not read from server")
+			}
+
+			t.Logf("received message with id: %s", publishedMsg.MsgId)
+		}
+	}()
 
 }

@@ -68,6 +68,9 @@ func WriteToIO(msg *Message, w *bufio.Writer) bool {
 			log.Errorf("could not write messages, err: %s", err)
 			return false
 		}
+
+		_, err = w.Write(newLineSeparator)
+
 	}
 
 	return true

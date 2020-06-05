@@ -10,11 +10,15 @@ type Message struct {
 }
 
 func NewMessage(t string, msgId string) *Message {
-	return &Message{
+	msg := &Message{
 		Type:   t,
 		MsgId:  msgId,
 		Fields: make(map[string][]byte),
 	}
+
+	msg.WriteStr("msgId", msgId)
+
+	return msg
 }
 
 func (m *Message) ReadStr(key string) (string, bool) {

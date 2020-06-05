@@ -11,7 +11,7 @@ type ServerConfig struct {
 	ConnectionPort int32
 }
 
-// Server will start a TCP socket server to accept incoming connections and read the data from the conn
+// Server will start a TCP socket server to accept incoming connections and read the data from the Conn
 // the data is then sent to a chanel which is processed by the manager
 type Server struct {
 	config   ServerConfig
@@ -50,7 +50,7 @@ func (s *Server) Start() {
 			c, err := listener.Accept()
 
 			if err != nil {
-				log.Errorf("error while accepting conn, err: %s", err)
+				log.Errorf("error while accepting Conn, err: %s", err)
 				continue
 			}
 
@@ -75,6 +75,8 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 
 		s.process(client, msg)
+
+		break
 	}
 
 }

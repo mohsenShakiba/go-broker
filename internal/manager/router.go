@@ -12,7 +12,7 @@ func NewRouter() *Router {
 	}
 }
 
-func (r Router) AddRoute(routes []string, client *Subscriber) {
+func (r *Router) AddRoute(routes []string, client *Subscriber) {
 
 	for _, route := range routes {
 		route := &Route{

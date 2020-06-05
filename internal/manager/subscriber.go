@@ -36,7 +36,7 @@ func (s *Subscriber) start() {
 		item := s.queue.Dequeue()
 
 		// convert to payload
-		msg := item.(PayloadMessage)
+		msg := item.(*PayloadMessage)
 
 		// pass it through the rate controller
 		s.rController.WaitOne(msg.Id)

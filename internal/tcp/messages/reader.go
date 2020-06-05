@@ -8,6 +8,7 @@ import (
 )
 
 var spaceSeparator = []byte(" ")
+var newLineSeparator = []byte("\n")
 
 func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
@@ -53,8 +54,9 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 	for i := 0; i < msgPartCount; i++ {
 
 		// read key
-		key, err := r.ReadSlice(' ')
-		key = key[:len(key)-1]
+		keyB, err := r.ReadSlice(' ')
+		keyB = keyB[:len(keyB)-1]
+		key := string(keyB)
 
 		// if error
 		if err != nil {
@@ -94,7 +96,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 			return nil, false
 		}
 
-		msg.Fields[string(key)] = payload
+		msg.Fields[string(key)] = payload[:len(payload)-1]
 	}
 
 	// get msg id

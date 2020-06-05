@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"fmt"
 	"go-broker/internal/tcp"
 	"strings"
 )
@@ -31,6 +32,8 @@ func (m *Manager) handleSubscribeMessage(ctx *tcp.Context) {
 	subscriber := NewSubscriber(ctx.Client, subConfig)
 
 	m.router.AddRoute(routes, subscriber)
+
+	go subscriber.start()
 
 	// send ack
 	ctx.SendAck()
