@@ -1,6 +1,7 @@
 package manager
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/manager/internal/queue"
 	"go-broker/internal/manager/internal/rate_controller"
 	"go-broker/internal/tcp"
@@ -53,5 +54,6 @@ func (s *Subscriber) OnNack(msgId string) {
 }
 
 func (s *Subscriber) OnMessage(message *PayloadMessage) {
+	log.Infof("enqueuing message with id %s", message.Id)
 	s.queue.Enqueue(message)
 }

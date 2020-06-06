@@ -62,7 +62,7 @@ func initPublisher(t *testing.T) {
 
 		t.Logf("sent message with id: %d", numberOfSentMessages)
 
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond * 1000)
 	}
 }
 
@@ -87,8 +87,6 @@ func initSubscriber(t *testing.T) {
 	if !ok {
 		t.Fatalf("could not write to server")
 	}
-
-	writer.Flush()
 
 	go func() {
 

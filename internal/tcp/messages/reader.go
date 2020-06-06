@@ -5,6 +5,7 @@ import (
 	"bytes"
 	log "github.com/sirupsen/logrus"
 	"strconv"
+	"strings"
 )
 
 var spaceSeparator = []byte(" ")
@@ -12,8 +13,11 @@ var newLineSeparator = []byte("\n")
 
 func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
+	buff := bytes.Buffer{}
+
 	// read header
 	header, err := r.ReadSlice('\n')
+	buff.Write(header)
 
 	// if error
 	if err != nil {
@@ -55,6 +59,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 		// read key
 		keyB, err := r.ReadSlice(' ')
+		buff.Write(keyB)
 		keyB = keyB[:len(keyB)-1]
 		key := string(keyB)
 
@@ -66,6 +71,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 		// read space 2
 		length, err := r.ReadSlice(' ')
+		buff.Write(length)
 		length = length[:len(length)-1]
 
 		// if error
@@ -89,6 +95,7 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 
 		// read
 		_, err = r.Read(payload)
+		buff.Write(payload)
 
 		// if error
 		if err != nil {
@@ -103,9 +110,21 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 	msgId, ok := msg.Fields["msgId"]
 
 	if !ok {
-		log.Errorf("message doesn't contain a messages id, discarding")
+		m := string(buff.Bytes())
+		log.Errorf("message doesn't contain a messages id, discarding %s", m)
 		return nil, false
 	}
+
+	for k, _ := range msg.Fields {
+		m := string(buff.Bytes())
+		if strings.Contains(k, "\n") {
+			log.Errorf("message doesn't contain a messages id, discarding %s", m)
+		}
+	}
+
+	//m2 := string(buff.Bytes())
+	//
+	//log.Infof("original message was %s", m2)
 
 	msg.MsgId = string(msgId)
 

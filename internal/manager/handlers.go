@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"fmt"
 	"go-broker/internal/tcp"
 	"strings"
 )

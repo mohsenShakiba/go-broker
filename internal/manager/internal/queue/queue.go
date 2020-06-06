@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -39,6 +40,7 @@ func (q *queue) Enqueue(i interface{}) {
 	q.store = append(q.store, i)
 
 	if qLength == 0 {
+		fmt.Printf("adding item\n")
 		q.l2.Unlock()
 	}
 }
@@ -53,7 +55,9 @@ func (q *queue) Dequeue() interface{} {
 		defer q.l.Unlock()
 	}
 
+	fmt.Printf("message waiting for items to be available\n")
 	q.l2.Lock()
+	fmt.Printf("an item was available\n")
 	defer func() {
 		if len(q.store) > 0 {
 			q.l2.Unlock()

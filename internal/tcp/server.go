@@ -71,12 +71,10 @@ func (s *Server) handleConnection(conn net.Conn) {
 		msg, ok := client.Read()
 
 		if !ok {
-			return
+			continue
 		}
 
 		s.process(client, msg)
-
-		break
 	}
 
 }

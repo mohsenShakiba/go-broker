@@ -1,6 +1,7 @@
 package manager
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/storage"
 	"go-broker/internal/tcp"
 )
@@ -28,7 +29,7 @@ func InitManager(basePath string) (*Manager, error) {
 	router := NewRouter()
 
 	storageConfig := storage.StorageConfig{
-		Path:           "C:\\Users\\m.shakiba.PSZ021-PC\\Desktop\\data",
+		Path:           basePath,
 		FileMaxSize:    1024,
 		FileNamePrefix: "go",
 	}
@@ -57,6 +58,9 @@ func InitManager(basePath string) (*Manager, error) {
 }
 
 func (m *Manager) processMessage(p *PayloadMessage) {
+
+	log.Infof("processing message with id %s", p.Id)
+
 	subscribers := m.router.Match(p.Routes)
 
 	for _, s := range subscribers {
