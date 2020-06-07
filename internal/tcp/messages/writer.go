@@ -76,7 +76,11 @@ func WriteToIO(msg *Message, wr *bufio.Writer) bool {
 
 	}
 
+	log.Infof("the message written is: %s", string(w.Bytes()))
+
 	wr.Write(w.Bytes())
+
+	wr.Flush()
 
 	return true
 }

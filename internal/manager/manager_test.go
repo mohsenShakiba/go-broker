@@ -47,7 +47,7 @@ func initPublisher(t *testing.T) {
 
 	for {
 		msg := messages.NewMessage("PUB", string(numberOfSentMessages))
-		msg.WriteStr("routes", "r1")
+		msg.WriteStr("routes", "route")
 		msg.WriteStr("payload", string(numberOfSentMessages))
 
 		writer := bufio.NewWriterSize(publisherClient, 1)

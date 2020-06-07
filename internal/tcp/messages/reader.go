@@ -122,9 +122,9 @@ func ReadFromIO(r *bufio.Reader) (*Message, bool) {
 		}
 	}
 
-	//m2 := string(buff.Bytes())
-	//
-	//log.Infof("original message was %s", m2)
+	m2 := string(buff.Bytes())
+
+	log.Infof("original message was %s", m2)
 
 	msg.MsgId = string(msgId)
 
