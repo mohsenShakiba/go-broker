@@ -15,6 +15,7 @@ import (
 var numberOfSentMessages = 0
 var numberOfReceivedMessages = 0
 var counter = 0
+var pub_counter = 0
 
 func TestFull(t *testing.T) {
 
@@ -50,13 +51,22 @@ func initPublisher(t *testing.T) {
 		t.Fatalf("could not establish client connection")
 	}
 
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for {
+			<-ticker.C
+			t.Logf("RPS PUB is %d", pub_counter)
+			pub_counter = 0
+		}
+	}()
+
+	msg := messages.NewMessage("PUB", strconv.Itoa(numberOfSentMessages))
+	msg.WriteStr("routes", "r1")
+
+	writer := bufio.NewWriterSize(publisherClient, 1)
+
 	for {
-		msg := messages.NewMessage("PUB", strconv.Itoa(numberOfSentMessages))
-		msg.WriteStr("routes", "r1")
 		msg.WriteStr("payload", string(numberOfSentMessages))
-
-		writer := bufio.NewWriterSize(publisherClient, 1)
-
 		ok := messages.WriteToIO(msg, writer)
 
 		writer.Flush()
@@ -66,8 +76,9 @@ func initPublisher(t *testing.T) {
 		}
 
 		numberOfSentMessages += 1
+		pub_counter += 1
 
-		time.Sleep(time.Millisecond)
+		//time.Sleep(time.Millisecond * 1)
 	}
 }
 
@@ -85,7 +96,7 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := messages.NewMessage("SUB", "-")
 	subMsg.WriteStr("routes", "r1")
-	subMsg.WriteStr("dop", "1")
+	subMsg.WriteStr("dop", "10")
 
 	ok := messages.WriteToIO(subMsg, writer)
 
@@ -97,7 +108,7 @@ func initSubscriber(t *testing.T) {
 	go func() {
 		for {
 			<-ticker.C
-			t.Logf("RPS is %d", counter)
+			t.Logf("RPS SUB is %d", counter)
 			counter = 0
 		}
 	}()
@@ -131,7 +142,6 @@ func initSubscriber(t *testing.T) {
 
 			writer.Flush()
 			counter += 1
-
 		}
 	}()
 

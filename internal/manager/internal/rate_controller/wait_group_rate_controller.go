@@ -1,11 +1,15 @@
 package rate_controller
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type waitGroupRateController struct {
 	parallelism int
 	l1          sync.Mutex
 	l2          sync.Mutex
+	l3          sync.Mutex
 	isBlocked   bool
 	kmap        map[string]bool
 }
@@ -15,9 +19,12 @@ func (c *waitGroupRateController) WaitOne(key string) {
 
 	// if not available
 	if c.parallelism <= 0 {
+		c.l3.Lock()
 		c.isBlocked = true
 		c.l1.Unlock()
+		fmt.Println("now blocked")
 		c.l2.Lock()
+		c.l3.Unlock()
 		c.l1.Lock()
 		c.kmap[key] = true
 		c.parallelism -= 1
@@ -38,10 +45,13 @@ func (c *waitGroupRateController) ReleaseOne(key string) {
 
 	if ok {
 
+		c.l3.Lock()
 		if c.isBlocked {
-			c.l2.Unlock()
+			fmt.Println("now unblocked")
 			c.isBlocked = false
+			c.l2.Unlock()
 		}
+		c.l3.Unlock()
 
 		c.parallelism += 1
 		delete(c.kmap, key)
