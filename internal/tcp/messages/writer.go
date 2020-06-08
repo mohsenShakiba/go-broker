@@ -2,14 +2,11 @@ package messages
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 )
 
-func WriteToIO(msg *Message, wr *bufio.Writer) bool {
-
-	w := bytes.Buffer{}
+func WriteToIO(msg *Message, w *bufio.Writer) bool {
 
 	// create header
 	header := fmt.Sprintf("%s %d\n", msg.Type, len(msg.Fields))
@@ -74,13 +71,9 @@ func WriteToIO(msg *Message, wr *bufio.Writer) bool {
 
 		_, err = w.Write(newLineSeparator)
 
+		w.Flush()
+
 	}
-
-	log.Infof("the message written is: %s", string(w.Bytes()))
-
-	wr.Write(w.Bytes())
-
-	wr.Flush()
 
 	return true
 }

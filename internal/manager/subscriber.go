@@ -42,10 +42,14 @@ func (s *Subscriber) start() {
 		// pass it through the rate controller
 		s.rController.WaitOne(msg.Id)
 
+		// send the message
+		s.client.Write(msg.ToTcpMessage())
+
 	}
 }
 
 func (s *Subscriber) OnAck(msgId string) {
+	log.Infof("ack was processed for msgId: %s", msgId)
 	s.rController.ReleaseOne(msgId)
 }
 

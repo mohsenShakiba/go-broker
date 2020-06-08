@@ -2,16 +2,19 @@ package manager
 
 import (
 	"bufio"
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/tcp/messages"
 	"io/ioutil"
 	"net"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 )
 
 var numberOfSentMessages = 0
 var numberOfReceivedMessages = 0
+var counter = 0
 
 func TestFull(t *testing.T) {
 
@@ -20,6 +23,8 @@ func TestFull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	log.SetLevel(log.WarnLevel)
 
 	defer os.RemoveAll(dir)
 
@@ -46,13 +51,15 @@ func initPublisher(t *testing.T) {
 	}
 
 	for {
-		msg := messages.NewMessage("PUB", string(numberOfSentMessages))
-		msg.WriteStr("routes", "route")
+		msg := messages.NewMessage("PUB", strconv.Itoa(numberOfSentMessages))
+		msg.WriteStr("routes", "r1")
 		msg.WriteStr("payload", string(numberOfSentMessages))
 
 		writer := bufio.NewWriterSize(publisherClient, 1)
 
 		ok := messages.WriteToIO(msg, writer)
+
+		writer.Flush()
 
 		if !ok {
 			t.Fatalf("could not write to server")
@@ -60,9 +67,7 @@ func initPublisher(t *testing.T) {
 
 		numberOfSentMessages += 1
 
-		t.Logf("sent message with id: %d", numberOfSentMessages)
-
-		time.Sleep(time.Millisecond * 1000)
+		time.Sleep(time.Millisecond)
 	}
 }
 
@@ -80,13 +85,22 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := messages.NewMessage("SUB", "-")
 	subMsg.WriteStr("routes", "r1")
-	subMsg.WriteStr("dop", "10")
+	subMsg.WriteStr("dop", "1")
 
 	ok := messages.WriteToIO(subMsg, writer)
 
 	if !ok {
 		t.Fatalf("could not write to server")
 	}
+
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for {
+			<-ticker.C
+			t.Logf("RPS is %d", counter)
+			counter = 0
+		}
+	}()
 
 	go func() {
 
@@ -108,7 +122,16 @@ func initSubscriber(t *testing.T) {
 				t.Fatalf("could not read from server")
 			}
 
-			t.Logf("received message with id: %s", publishedMsg.MsgId)
+			ackMsg := messages.NewMessage("ACK", publishedMsg.MsgId)
+			ok = messages.WriteToIO(ackMsg, writer)
+
+			if !ok {
+				t.Fatalf("failed to write ack message")
+			}
+
+			writer.Flush()
+			counter += 1
+
 		}
 	}()
 

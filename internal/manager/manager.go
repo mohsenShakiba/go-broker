@@ -4,12 +4,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go-broker/internal/storage"
 	"go-broker/internal/tcp"
+	"sync"
 )
 
 type Manager struct {
-	socketServer *tcp.Server
-	storage      storage.Storage
-	router       *Router
+	socketServer   *tcp.Server
+	storage        storage.Storage
+	router         *Router
+	messageMapping map[string]*Subscriber
+	lock           sync.Mutex
 }
 
 func InitManager(basePath string) (*Manager, error) {
@@ -44,15 +47,16 @@ func InitManager(basePath string) (*Manager, error) {
 	}
 
 	mgr := &Manager{
-		socketServer: socketServer,
-		storage:      s,
-		router:       router,
+		socketServer:   socketServer,
+		storage:        s,
+		router:         router,
+		messageMapping: make(map[string]*Subscriber),
 	}
 
 	// register handlers
 	socketServer.RegisterHandler("SUB", mgr.handleSubscribeMessage)
 	socketServer.RegisterHandler("PUB", mgr.handlePublishMessage)
-	socketServer.RegisterHandler("ACK", mgr.handlePublishMessage)
+	socketServer.RegisterHandler("ACK", mgr.handleAck)
 
 	return mgr, nil
 }
@@ -63,7 +67,24 @@ func (m *Manager) processMessage(p *PayloadMessage) {
 
 	subscribers := m.router.Match(p.Routes)
 
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	for _, s := range subscribers {
 		s.OnMessage(p)
+		m.messageMapping[p.Id] = s
 	}
+}
+
+func (m *Manager) processAck(msgId string) {
+	m.lock.Lock()
+	s, ok := m.messageMapping[msgId]
+	m.lock.Unlock()
+
+	log.Infof("processing ack for msgId: %s", msgId)
+
+	if !ok {
+		return
+	}
+
+	s.OnAck(msgId)
 }

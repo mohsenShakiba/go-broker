@@ -28,8 +28,8 @@ type Client struct {
 func initSocketClient(conn net.Conn) *Client {
 	return &Client{
 		ClientId: uuid.New().String(),
-		Reader:   bufio.NewReaderSize(conn, 1),
-		Writer:   bufio.NewWriterSize(conn, 1),
+		Reader:   bufio.NewReader(conn),
+		Writer:   bufio.NewWriter(conn),
 		Conn:     conn,
 		lock:     sync.Mutex{},
 	}
@@ -60,6 +60,8 @@ func (c *Client) Write(msg *messages.Message) {
 	if !res {
 		log.Errorf("failed to write result")
 	}
+
+	c.Writer.Flush()
 }
 
 // Close will close the socket Conn

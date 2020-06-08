@@ -1,6 +1,7 @@
 package manager
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/tcp"
 	"strings"
 )
@@ -67,7 +68,11 @@ func (m *Manager) handlePublishMessage(ctx *tcp.Context) {
 }
 
 func (m *Manager) handleAck(ctx *tcp.Context) {
+	msgId := ctx.Message.MsgId
 
+	log.Infof("ack was received for msgId: %s", msgId)
+
+	m.processAck(msgId)
 }
 
 func (m *Manager) handleNack(ctx *tcp.Context) {
