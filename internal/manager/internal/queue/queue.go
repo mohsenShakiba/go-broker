@@ -45,22 +45,19 @@ func (q *queue) Enqueue(i interface{}) {
 
 func (q *queue) Dequeue() interface{} {
 
-	q.l.Lock()
-
-	if len(q.store) == 0 {
-		q.l.Unlock()
-	} else {
-		defer q.l.Unlock()
-	}
-
 	q.l2.Lock()
-	defer func() {
-		if len(q.store) > 0 {
-			q.l2.Unlock()
-		}
-	}()
+
+	q.l.Lock()
+	defer q.l.Unlock()
 
 	i := q.store[0]
 	q.store = q.store[1:]
+
+	l := len(q.store)
+
+	if l > 0 {
+		q.l2.Unlock()
+	}
+
 	return i
 }

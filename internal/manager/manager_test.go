@@ -55,7 +55,7 @@ func initPublisher(t *testing.T) {
 	go func() {
 		for {
 			<-ticker.C
-			t.Logf("RPS PUB is %d", pub_counter)
+			//t.Logf("RPS PUB is %d", pub_counter)
 			pub_counter = 0
 		}
 	}()
@@ -96,7 +96,7 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := messages.NewMessage("SUB", "-")
 	subMsg.WriteStr("routes", "r1")
-	subMsg.WriteStr("dop", "10")
+	subMsg.WriteStr("dop", "100")
 
 	ok := messages.WriteToIO(subMsg, writer)
 
