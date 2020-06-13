@@ -13,22 +13,7 @@ type page struct {
 }
 
 func (p *page) fileHandler() (*os.File, error) {
-
-	return os.OpenFile("C:\\Users\\user\\Desktop\\tf_1", os.O_RDWR, 0777)
-
-	//if p.fh != nil {
-	//	return p.fh, nil
-	//}
-	//
-	//fh, err := os.OpenFile(p.path, os.O_CREATE|os.O_RDWR, 0777)
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	////p.fh = fh
-	//
-	//return fh, nil
+	return os.OpenFile(p.path, os.O_RDWR|os.O_CREATE, 0777)
 }
 
 func (p *page) close() {

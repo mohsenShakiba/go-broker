@@ -67,6 +67,18 @@ func (m *Manager) processMessage(p *PayloadMessage) {
 
 	subscribers := m.router.Match(p.Routes)
 
+	msgB, err := p.ToBinary()
+
+	if err != nil {
+		log.Errorf("failed to serialize message, error: %s", err)
+	}
+
+	err = m.storage.Write(getStringHash(p.Id), msgB)
+
+	if err != nil {
+		log.Errorf("failed to persist message, error: %s", err)
+	}
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for _, s := range subscribers {
@@ -79,6 +91,12 @@ func (m *Manager) processAck(msgId string) {
 	m.lock.Lock()
 	s, ok := m.messageMapping[msgId]
 	m.lock.Unlock()
+
+	err := m.storage.Delete(getStringHash(msgId))
+
+	if err != nil {
+		log.Errorf("failed to persist ack, error: %s", err)
+	}
 
 	log.Infof("processing ack for msgId: %s", msgId)
 

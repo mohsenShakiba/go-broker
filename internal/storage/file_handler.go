@@ -17,6 +17,7 @@ type fileHandler struct {
 	conf             StorageConfig
 	lock             sync.RWMutex
 	pages            map[int]*page
+	rwLock           sync.RWMutex
 	currentPage      *page
 	currentPageIndex int
 }
@@ -146,8 +147,9 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 			activeEntries: 0,
 			fh:            nil,
 		}
-
+		fh.lock.Lock()
 		fh.pages[fh.currentPageIndex] = p
+		fh.lock.Unlock()
 		fh.currentPage = p
 	}
 
@@ -194,7 +196,9 @@ func (fh *fileHandler) delete(entry *entry) error {
 		return errors.New("entry not found")
 	}
 
+	fh.lock.Lock()
 	p := fh.pages[int(entry.pageNo)]
+	fh.lock.Unlock()
 
 	h, err := p.fileHandler()
 

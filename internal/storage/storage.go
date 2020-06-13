@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"sync"
 	"time"
 )
 
@@ -31,9 +32,13 @@ type storage struct {
 	config   StorageConfig
 	handler  *fileHandler
 	entryMap map[int64]*entry
+	lock     sync.Mutex
 }
 
 func (s *storage) Init() error {
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	s.handler = newHandler(s.config)
 
@@ -52,12 +57,16 @@ func (s *storage) Init() error {
 
 func (s *storage) Write(id int64, payload []byte) error {
 	e, err := s.handler.write(id, payload)
+	s.lock.Lock()
 	s.entryMap[id] = e
+	s.lock.Unlock()
 	return err
 }
 
 func (s *storage) Read(id int64) ([]byte, error) {
+	s.lock.Lock()
 	e := s.entryMap[id]
+	s.lock.Unlock()
 
 	if e == nil {
 		return nil, errors.New("entry not found")
@@ -67,13 +76,17 @@ func (s *storage) Read(id int64) ([]byte, error) {
 }
 
 func (s *storage) Delete(id int64) error {
+	s.lock.Lock()
 	e := s.entryMap[id]
+	s.lock.Unlock()
 
 	if e == nil {
 		return errors.New("entry not found")
 	}
 
+	s.lock.Lock()
 	delete(s.entryMap, id)
+	s.lock.Unlock()
 
 	return s.handler.delete(e)
 }

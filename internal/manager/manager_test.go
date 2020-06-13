@@ -56,20 +56,17 @@ func initPublisher(t *testing.T) {
 		for {
 			<-ticker.C
 			//t.Logf("RPS PUB is %d", pub_counter)
-			pub_counter = 0
+			//pub_counter = 0
 		}
 	}()
 
-	msg := messages.NewMessage("PUB", strconv.Itoa(numberOfSentMessages))
-	msg.WriteStr("routes", "r1")
-
-	writer := bufio.NewWriterSize(publisherClient, 1)
+	writer := bufio.NewWriter(publisherClient)
 
 	for {
+		msg := messages.NewMessage("PUB", strconv.Itoa(numberOfSentMessages))
+		msg.WriteStr("routes", "r1")
 		msg.WriteStr("payload", string(numberOfSentMessages))
 		ok := messages.WriteToIO(msg, writer)
-
-		writer.Flush()
 
 		if !ok {
 			t.Fatalf("could not write to server")
@@ -85,8 +82,8 @@ func initPublisher(t *testing.T) {
 func initSubscriber(t *testing.T) {
 
 	subscribeClient, err := net.Dial("tcp", "127.0.0.1:8085")
-	writer := bufio.NewWriterSize(subscribeClient, 1)
-	reader := bufio.NewReaderSize(subscribeClient, 1)
+	writer := bufio.NewWriter(subscribeClient)
+	reader := bufio.NewReader(subscribeClient)
 
 	if err != nil {
 		t.Fatalf("could not establish client connection")
@@ -140,7 +137,6 @@ func initSubscriber(t *testing.T) {
 				t.Fatalf("failed to write ack message")
 			}
 
-			writer.Flush()
 			counter += 1
 		}
 	}()

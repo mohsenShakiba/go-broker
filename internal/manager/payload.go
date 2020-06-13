@@ -1,7 +1,9 @@
 package manager
 
 import (
+	"encoding/json"
 	"go-broker/internal/tcp/messages"
+	"hash/fnv"
 	"strings"
 )
 
@@ -10,6 +12,12 @@ type PayloadMessage struct {
 	Id      string
 	Routes  []string
 	Payload []byte
+}
+
+func getStringHash(id string) int64 {
+	h := fnv.New32a()
+	h.Write([]byte(id))
+	return int64(h.Sum32())
 }
 
 func (p *PayloadMessage) FromTcpMessage(msg *messages.Message) bool {
@@ -47,4 +55,20 @@ func (p *PayloadMessage) ToTcpMessage() *messages.Message {
 	msg.Fields["payload"] = p.Payload
 
 	return msg
+}
+
+func (p *PayloadMessage) ToBinary() ([]byte, error) {
+	b, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (p *PayloadMessage) FromBinary(b []byte) error {
+	err := json.Unmarshal(b, p)
+	if err != nil {
+		return err
+	}
+	return nil
 }
