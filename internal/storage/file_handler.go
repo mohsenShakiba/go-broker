@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"go-broker/internal/kvs"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,7 +33,7 @@ func newHandler(conf StorageConfig) *fileHandler {
 	}
 }
 
-func (fh *fileHandler) readAllEntries() ([]*entry, error) {
+func (fh *fileHandler) readAllEntries() ([]*kvs.entry, error) {
 	fh.lock.Lock()
 	defer fh.lock.Unlock()
 
@@ -42,7 +43,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 		return nil, err
 	}
 
-	entries := make([]*entry, 0, 1024)
+	entries := make([]*kvs.entry, 0, 1024)
 
 	for _, f := range files {
 		if strings.Contains(f.Name(), fh.conf.FileNamePrefix) {
@@ -69,7 +70,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 			var off int64 = 0
 			b := make([]byte, 20)
 			blen := int64(20)
-			pageEntries := make([]*entry, 0, 1024)
+			pageEntries := make([]*kvs.entry, 0, 1024)
 
 			for {
 				_, err := h.ReadAt(b, off)
@@ -82,7 +83,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 					return nil, err
 				}
 
-				entry := fromBinary(b)
+				entry := kvs.fromBinary(b)
 
 				entry.offset = off
 				off += blen + entry.length
@@ -109,7 +110,7 @@ func (fh *fileHandler) readAllEntries() ([]*entry, error) {
 	return entries, nil
 }
 
-func (fh *fileHandler) readPayload(e *entry) ([]byte, error) {
+func (fh *fileHandler) readPayload(e *kvs.entry) ([]byte, error) {
 	fh.lock.RLock()
 	defer fh.lock.RUnlock()
 
@@ -132,7 +133,7 @@ func (fh *fileHandler) readPayload(e *entry) ([]byte, error) {
 	return b, nil
 }
 
-func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
+func (fh *fileHandler) write(id int64, payload []byte) (*kvs.entry, error) {
 	p := fh.currentPage
 
 	if fh.currentPage == nil || fh.currentPage.offset >= fh.conf.FileMaxSize {
@@ -153,7 +154,7 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 		fh.currentPage = p
 	}
 
-	entry := &entry{
+	entry := &kvs.entry{
 		deleted: 0,
 		id:      id,
 		length:  int64(len(payload)),
@@ -169,7 +170,7 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 
 	defer h.Close()
 
-	b := toBinary(entry)
+	b := kvs.toBinary(entry)
 
 	_, err = h.WriteAt(b, p.offset)
 
@@ -190,7 +191,7 @@ func (fh *fileHandler) write(id int64, payload []byte) (*entry, error) {
 	return entry, nil
 }
 
-func (fh *fileHandler) delete(entry *entry) error {
+func (fh *fileHandler) delete(entry *kvs.entry) error {
 
 	if entry == nil {
 		return errors.New("entry not found")
