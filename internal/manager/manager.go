@@ -2,7 +2,9 @@ package manager
 
 import (
 	log "github.com/sirupsen/logrus"
+	"go-broker/internal/models"
 	"go-broker/internal/storage"
+	"go-broker/internal/subscriber"
 	"go-broker/internal/tcp"
 	"sync"
 )
@@ -11,7 +13,7 @@ type Manager struct {
 	socketServer   *tcp.Server
 	storage        storage.Storage
 	router         *Router
-	messageMapping map[string]*Subscriber
+	messageMapping map[string]*subscriber.Subscriber
 	lock           sync.Mutex
 }
 
@@ -50,7 +52,7 @@ func InitManager(basePath string) (*Manager, error) {
 		socketServer:   socketServer,
 		storage:        s,
 		router:         router,
-		messageMapping: make(map[string]*Subscriber),
+		messageMapping: make(map[string]*subscriber.Subscriber),
 	}
 
 	// register handlers
@@ -61,7 +63,7 @@ func InitManager(basePath string) (*Manager, error) {
 	return mgr, nil
 }
 
-func (m *Manager) processMessage(p *PayloadMessage) {
+func (m *Manager) processMessage(p *models.Message) {
 
 	log.Infof("processing message with id %s", p.Id)
 
@@ -73,7 +75,7 @@ func (m *Manager) processMessage(p *PayloadMessage) {
 		log.Errorf("failed to serialize message, error: %s", err)
 	}
 
-	err = m.storage.Write(getStringHash(p.Id), msgB)
+	err = m.storage.Write(models.getStringHash(p.Id), msgB)
 
 	if err != nil {
 		log.Errorf("failed to persist message, error: %s", err)
@@ -92,7 +94,7 @@ func (m *Manager) processAck(msgId string) {
 	s, ok := m.messageMapping[msgId]
 	m.lock.Unlock()
 
-	err := m.storage.Delete(getStringHash(msgId))
+	err := m.storage.Delete(models.getStringHash(msgId))
 
 	if err != nil {
 		log.Errorf("failed to persist ack, error: %s", err)

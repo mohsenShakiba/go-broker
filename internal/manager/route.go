@@ -1,6 +1,7 @@
 package manager
 
 import (
+	subscriber2 "go-broker/internal/subscriber"
 	"strings"
 )
 
@@ -16,7 +17,7 @@ type Route struct {
 	Path       string
 	segments   []string
 	cache      map[string]bool
-	subscriber *Subscriber
+	subscriber *subscriber2.Subscriber
 }
 
 func ProcessPath(path string) []string {

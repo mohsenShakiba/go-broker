@@ -1,5 +1,7 @@
 package manager
 
+import "go-broker/internal/subscriber"
+
 // Router is in charge of routing incoming messages to appropriate subscribers
 //based on the message and subscriber routes
 type Router struct {
@@ -12,7 +14,7 @@ func NewRouter() *Router {
 	}
 }
 
-func (r *Router) AddRoute(routes []string, client *Subscriber) {
+func (r *Router) AddRoute(routes []string, client *subscriber.Subscriber) {
 
 	for _, route := range routes {
 		route := &Route{
@@ -26,8 +28,8 @@ func (r *Router) AddRoute(routes []string, client *Subscriber) {
 
 }
 
-func (r *Router) Match(path []string) map[string]*Subscriber {
-	clients := make(map[string]*Subscriber, 0)
+func (r *Router) Match(path []string) map[string]*subscriber.Subscriber {
+	clients := make(map[string]*subscriber.Subscriber, 0)
 
 	for _, r := range r.Routes {
 		for _, p := range path {

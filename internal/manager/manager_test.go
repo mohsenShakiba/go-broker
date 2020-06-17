@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -93,7 +94,7 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := messages.NewMessage("SUB", "-")
 	subMsg.WriteStr("routes", "r1")
-	subMsg.WriteStr("dop", "100")
+	subMsg.WriteStr("dop", "100000")
 
 	ok := messages.WriteToIO(subMsg, writer)
 
@@ -123,6 +124,8 @@ func initSubscriber(t *testing.T) {
 			t.Fatalf("the message type must be ack")
 		}
 
+		var l sync.Mutex
+
 		for {
 			publishedMsg, ok := messages.ReadFromIO(reader)
 
@@ -130,14 +133,21 @@ func initSubscriber(t *testing.T) {
 				t.Fatalf("could not read from server")
 			}
 
-			ackMsg := messages.NewMessage("ACK", publishedMsg.MsgId)
-			ok = messages.WriteToIO(ackMsg, writer)
+			msgId := publishedMsg.MsgId
+			go func() {
+				time.Sleep(time.Second)
+				l.Lock()
+				defer l.Unlock()
+				ackMsg := messages.NewMessage("ACK", msgId)
+				ok = messages.WriteToIO(ackMsg, writer)
 
-			if !ok {
-				t.Fatalf("failed to write ack message")
-			}
+				if !ok {
+					t.Fatalf("failed to write ack message")
+				}
 
-			counter += 1
+				counter += 1
+			}()
+
 		}
 	}()
 

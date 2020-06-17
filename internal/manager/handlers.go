@@ -2,6 +2,8 @@ package manager
 
 import (
 	log "github.com/sirupsen/logrus"
+	"go-broker/internal/models"
+	subscriber2 "go-broker/internal/subscriber"
 	"go-broker/internal/tcp"
 	"strings"
 )
@@ -24,12 +26,12 @@ func (m *Manager) handleSubscribeMessage(ctx *tcp.Context) {
 
 	routes := strings.Split(routesStr, ",")
 
-	subConfig := subscriberConfig{
+	subConfig := subscriber2.subscriberConfig{
 		parallelism: parallelism,
 		routes:      routes,
 	}
 
-	subscriber := NewSubscriber(ctx.Client, subConfig)
+	subscriber := subscriber2.NewSubscriber(ctx.Client, subConfig)
 
 	m.router.AddRoute(routes, subscriber)
 
@@ -58,7 +60,7 @@ func (m *Manager) handlePublishMessage(ctx *tcp.Context) {
 
 	routes := strings.Split(routesStr, ",")
 
-	p := &PayloadMessage{
+	p := &models.Message{
 		Id:      ctx.Message.MsgId,
 		Routes:  routes,
 		Payload: payloadContent,
