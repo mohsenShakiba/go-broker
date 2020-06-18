@@ -1,15 +1,23 @@
 package models
 
-import "io"
+import (
+	"bufio"
+)
 
 type Ack struct {
 	Id string
 }
 
-func FromReader(r io.Reader) (*Ack, error) {
+func (a *Ack) FromReader(r *bufio.Reader) error {
 
-}
+	// read the id
+	id, err := r.ReadSlice('\n')
 
-func ToWriter(r io.Writer) error {
+	if err != nil {
+		return err
+	}
 
+	a.Id = string(id)
+
+	return nil
 }

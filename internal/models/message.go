@@ -1,53 +1,104 @@
 package models
 
 import (
+	"bufio"
+	"encoding/binary"
 	"encoding/json"
-	"go-broker/internal/tcp/messages"
-	"strings"
+	"io"
 )
 
 // Message message contains the actual payload data and routing data
 type Message struct {
 	Id      string
-	Routes  []string
+	Route   string
 	Payload []byte
 }
 
-func (m *Message) FromTcpMessage(msg *messages.Message) bool {
+// FromReader will create the message from and io.Reader
+func (m *Message) FromReader(r *bufio.Reader) error {
+	// read the id
+	id, err := r.ReadSlice('\n')
 
-	routesStr, ok := msg.ReadStr("routes")
-
-	if !ok {
-		return false
+	if err != nil {
+		return err
 	}
 
-	routes := strings.Split(routesStr, ",")
+	m.Id = string(id)
 
-	payload, ok := msg.ReadByteArr("payload")
+	// read route
+	route, err := r.ReadSlice('\n')
 
-	if !ok {
-		return false
+	if err != nil {
+		return err
 	}
 
-	m.Id = msg.MsgId
-	m.Routes = routes
-	m.Payload = payload
+	m.Route = string(route)
 
-	return true
+	// read payload size
+	bSize := make([]byte, 8)
+	_, err = r.Read(bSize)
+
+	if err != nil {
+		return err
+	}
+
+	size := binary.BigEndian.Uint64(bSize)
+
+	// read payload
+	bPayload := make([]byte, size)
+	_, err = io.ReadFull(r, bPayload)
+
+	if err != nil {
+		return err
+	}
+
+	m.Payload = bPayload
+
+	return nil
 }
 
-func (m *Message) ToTcpMessage() *messages.Message {
-	msg := &messages.Message{
-		Type:   "PUB",
-		MsgId:  m.Id,
-		Fields: make(map[string][]byte),
+// Write will write the message to writer
+func (m *Message) Write(r *bufio.Writer) error {
+
+	// write message type
+	_, err := r.Write([]byte("PUB"))
+
+	if err != nil {
+		return err
 	}
 
-	msg.Fields["msgId"] = []byte(m.Id)
-	msg.Fields["routes"] = []byte(strings.Join(m.Routes, ","))
-	msg.Fields["payload"] = m.Payload
+	// write msg id
+	_, err = r.Write([]byte(m.Id))
 
-	return msg
+	if err != nil {
+		return err
+	}
+
+	// write route
+	_, err = r.Write([]byte(m.Route))
+
+	if err != nil {
+		return err
+	}
+
+	// write payload size
+	bSize := make([]byte, 8)
+	binary.BigEndian.PutUint64(bSize, uint64(len(m.Payload)))
+
+	_, err = r.Write(bSize)
+
+	if err != nil {
+		return err
+	}
+
+	// write route
+	_, err = r.Write(m.Payload)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *Message) ToBinary() ([]byte, error) {
