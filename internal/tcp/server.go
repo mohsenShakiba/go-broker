@@ -16,15 +16,15 @@ type ServerConfig struct {
 type Server struct {
 	config   ServerConfig
 	listener net.Listener
-	*Multiplexer
+	msgChan  chan *Context
 }
 
 // New will create a new socket server
-func New(config ServerConfig) *Server {
+func New(config ServerConfig, msgChan chan *Context) *Server {
 
 	s := &Server{
-		config:      config,
-		Multiplexer: newMultiplexer(),
+		config:  config,
+		msgChan: msgChan,
 	}
 
 	return s
@@ -68,13 +68,18 @@ func (s *Server) handleConnection(conn net.Conn) {
 	log.Infof("added a new client with Id: %s", client.ClientId)
 
 	for {
-		msg, ok := client.Read()
+		msg, err := client.Read()
 
-		if !ok {
+		ctx := &Context{
+			Message: msg,
+			Client:  client,
+		}
+
+		if err != nil {
 			continue
 		}
 
-		s.process(client, msg)
+		s.msgChan <- ctx
 	}
 
 }

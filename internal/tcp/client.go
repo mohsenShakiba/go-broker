@@ -32,6 +32,10 @@ func (c *Client) Read() (interface{}, error) {
 	return models.Parse(c.Reader)
 }
 
+func (c *Client) Write(b []byte) (int, error) {
+	return c.Conn.Write(b)
+}
+
 // Close will close the socket Conn
 func (c *Client) Close() error {
 

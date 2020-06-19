@@ -58,7 +58,7 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 }
 
 // Write will write the message to writer
-func (m *Message) Write(r *bufio.Writer) error {
+func (m *Message) Write(r io.Writer) error {
 
 	// write message type
 	_, err := r.Write([]byte("PUB"))

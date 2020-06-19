@@ -15,17 +15,21 @@ type Manager struct {
 	router         *Router
 	messageMapping map[string]*subscriber.Subscriber
 	lock           sync.Mutex
+	conf           Config
 }
 
-func InitManager(basePath string) (*Manager, error) {
+func InitManager(conf Config) (*Manager, error) {
 
 	// create socket server config
 	socketServerConf := tcp.ServerConfig{
-		ConnectionPort: 8085,
+		ConnectionPort: conf.Port,
 	}
 
+	// create msg chan
+	msgChan := make(chan *tcp.Context)
+
 	// create socket server
-	socketServer := tcp.New(socketServerConf)
+	socketServer := tcp.New(socketServerConf, msgChan)
 
 	// start socket server
 	socketServer.Start()
@@ -33,37 +37,36 @@ func InitManager(basePath string) (*Manager, error) {
 	// init router
 	router := NewRouter()
 
-	storageConfig := storage.StorageConfig{
-		Path:           basePath,
-		FileMaxSize:    1024,
-		FileNamePrefix: "go",
-	}
-
 	// init storage
-	s := storage.New(storageConfig)
-
-	err := s.Init()
+	store := storage.NewStorage(conf.FilePath, conf.StorageType)
+	err := store.Init()
 
 	if err != nil {
 		return nil, err
 	}
 
+	// create manager
 	mgr := &Manager{
 		socketServer:   socketServer,
-		storage:        s,
+		storage:        store,
 		router:         router,
 		messageMapping: make(map[string]*subscriber.Subscriber),
 	}
 
-	// register handlers
-	socketServer.RegisterHandler("SUB", mgr.handleSubscribeMessage)
-	socketServer.RegisterHandler("PUB", mgr.handlePublishMessage)
-	socketServer.RegisterHandler("ACK", mgr.handleAck)
+	// process incoming message
+	go mgr.processMessage(msgChan)
 
 	return mgr, nil
 }
 
-func (m *Manager) processMessage(p *models.Message) {
+func (m *Manager) processMessage(ch chan *tcp.Context) {
+
+	for {
+		msg := <-ch
+		switch msg.(type) {
+
+		}
+	}
 
 	log.Infof("processing message with id %s", p.Id)
 

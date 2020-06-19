@@ -1,6 +1,7 @@
 package subscriber
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/internal/rate_controller"
 	"go-broker/internal/models"
 	"go-broker/internal/tcp"
@@ -35,5 +36,8 @@ func (s *Subscriber) OnNack(msgId string) {
 
 func (s *Subscriber) OnMessage(msg *models.Message) {
 	s.rController.WaitOne(msg.Id)
-	s.client.Write(msg.ToTcpMessage())
+	err := msg.Write(s.client)
+	if err != nil {
+		log.Errorf("failed to write the message, error: %s", s.client.ClientId)
+	}
 }
