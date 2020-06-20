@@ -58,24 +58,26 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 }
 
 // Write will write the message to writer
-func (m *Message) Write(r io.Writer) error {
+func (m *Message) Write(w io.Writer) error {
+
+	WriteStr(w, "PUB", m.Id, m.Route)
 
 	// write message type
-	_, err := r.Write([]byte("PUB"))
+	_, err := w.Write([]byte("PUB"))
 
 	if err != nil {
 		return err
 	}
 
 	// write msg id
-	_, err = r.Write([]byte(m.Id))
+	_, err = w.Write([]byte(m.Id))
 
 	if err != nil {
 		return err
 	}
 
 	// write route
-	_, err = r.Write([]byte(m.Route))
+	_, err = w.Write([]byte(m.Route))
 
 	if err != nil {
 		return err
@@ -85,14 +87,14 @@ func (m *Message) Write(r io.Writer) error {
 	bSize := make([]byte, 8)
 	binary.BigEndian.PutUint64(bSize, uint64(len(m.Payload)))
 
-	_, err = r.Write(bSize)
+	_, err = w.Write(bSize)
 
 	if err != nil {
 		return err
 	}
 
 	// write route
-	_, err = r.Write(m.Payload)
+	_, err = w.Write(m.Payload)
 
 	if err != nil {
 		return err
