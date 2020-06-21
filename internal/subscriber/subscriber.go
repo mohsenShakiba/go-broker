@@ -38,6 +38,6 @@ func (s *Subscriber) OnMessage(msg *models.Message) {
 	s.rController.WaitOne(msg.Id)
 	err := msg.Write(s.client)
 	if err != nil {
-		log.Errorf("failed to write the message, error: %s", s.client.ClientId)
+		log.Errorf("failed to write the message, error: %s", err)
 	}
 }

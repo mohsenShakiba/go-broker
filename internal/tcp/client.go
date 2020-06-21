@@ -9,13 +9,13 @@ import (
 	"net"
 )
 
-// subscriber is in charge of reading the data from the Conn
+// subscriber is in charge of reading the data from the conn
 // and sending data to connecting using the default protocol
 type Client struct {
 	ClientId string
 	Reader   *bufio.Reader
 	Writer   *bufio.Writer
-	Conn     io.ReadWriteCloser
+	conn     io.ReadWriteCloser
 }
 
 // initSocketClient will create a new socket client
@@ -24,7 +24,7 @@ func initSocketClient(conn net.Conn) *Client {
 		ClientId: uuid.New().String(),
 		Reader:   bufio.NewReader(conn),
 		Writer:   bufio.NewWriter(conn),
-		Conn:     conn,
+		conn:     conn,
 	}
 }
 
@@ -34,7 +34,7 @@ func (c *Client) Read() (interface{}, error) {
 }
 
 func (c *Client) Write(b []byte) (int, error) {
-	return c.Conn.Write(b)
+	return c.conn.Write(b)
 }
 
 func (c *Client) SendError(id string, msg string) {
@@ -63,7 +63,6 @@ func (c *Client) SendAck(id string) {
 	if err != nil {
 		log.Errorf("failed to write ack to client, err: %s", err)
 	}
-
 }
 
 func (c *Client) SendNack(id string) {
@@ -79,10 +78,10 @@ func (c *Client) SendNack(id string) {
 
 }
 
-// Close will close the socket Conn
+// Close will close the socket conn
 func (c *Client) Close() error {
 
-	err := c.Conn.Close()
+	err := c.conn.Close()
 
 	return err
 }

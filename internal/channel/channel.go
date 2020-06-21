@@ -94,7 +94,7 @@ func (c *Channel) processMessages() {
 		c.lock.Unlock()
 
 		// send message
-		subscriber.OnMessage(msg)
+		go subscriber.OnMessage(msg)
 	}
 }
 
