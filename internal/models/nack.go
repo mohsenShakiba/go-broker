@@ -1,12 +1,15 @@
 package models
 
-import "bufio"
+import (
+	"bufio"
+	"io"
+)
 
 type Nack struct {
 	Id string
 }
 
-func (a *Nack) FromReader(r *bufio.Reader) error {
+func (n *Nack) FromReader(r *bufio.Reader) error {
 
 	// read the id
 	id, err := r.ReadSlice('\n')
@@ -15,7 +18,14 @@ func (a *Nack) FromReader(r *bufio.Reader) error {
 		return err
 	}
 
-	a.Id = string(id)
+	// trim the /n
+	id = id[:len(id)-1]
+
+	n.Id = string(id)
 
 	return nil
+}
+
+func (n *Nack) Write(w io.Writer) error {
+	return WriteStr(w, "NACK", n.Id)
 }

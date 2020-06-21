@@ -23,6 +23,9 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 		return err
 	}
 
+	// trim the /n
+	id = id[:len(id)-1]
+
 	m.Id = string(id)
 
 	// read route
@@ -31,6 +34,9 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 	if err != nil {
 		return err
 	}
+
+	// trim the /n
+	route = route[:len(route)-1]
 
 	m.Route = string(route)
 
@@ -45,14 +51,15 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 	size := binary.BigEndian.Uint64(bSize)
 
 	// read payload
-	bPayload := make([]byte, size)
+	// +1 for /n
+	bPayload := make([]byte, size+1)
 	_, err = io.ReadFull(r, bPayload)
 
 	if err != nil {
 		return err
 	}
 
-	m.Payload = bPayload
+	m.Payload = bPayload[:size]
 
 	return nil
 }
@@ -60,47 +67,13 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 // Write will write the message to writer
 func (m *Message) Write(w io.Writer) error {
 
-	WriteStr(w, "PUB", m.Id, m.Route)
-
-	// write message type
-	_, err := w.Write([]byte("PUB"))
+	err := WriteStr(w, "PUB", m.Id, m.Route)
 
 	if err != nil {
 		return err
 	}
 
-	// write msg id
-	_, err = w.Write([]byte(m.Id))
-
-	if err != nil {
-		return err
-	}
-
-	// write route
-	_, err = w.Write([]byte(m.Route))
-
-	if err != nil {
-		return err
-	}
-
-	// write payload size
-	bSize := make([]byte, 8)
-	binary.BigEndian.PutUint64(bSize, uint64(len(m.Payload)))
-
-	_, err = w.Write(bSize)
-
-	if err != nil {
-		return err
-	}
-
-	// write route
-	_, err = w.Write(m.Payload)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return WriteByte(w, m.Payload)
 }
 
 func (m *Message) ToBinary() ([]byte, error) {

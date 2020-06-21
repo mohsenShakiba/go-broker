@@ -1,12 +1,14 @@
 package models
 
-import "bufio"
+import (
+	"io"
+)
 
 type Err struct {
 	Id  string
 	Err string
 }
 
-func (e *Err) Write(r *bufio.Writer) error {
-	return WriteStr(r, "ERR", e.Id, e.Err)
+func (e *Err) Write(w io.Writer) error {
+	return WriteStr(w, "ERR", e.Id, e.Err)
 }

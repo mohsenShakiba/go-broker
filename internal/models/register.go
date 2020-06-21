@@ -3,16 +3,17 @@ package models
 import (
 	"bufio"
 	"encoding/binary"
+	"io"
 	"strings"
 )
 
 type Register struct {
 	Id     string
-	Dop    int
 	Routes []string
+	Dop    int
 }
 
-func (m *Register) FromReader(r *bufio.Reader) error {
+func (reg *Register) FromReader(r *bufio.Reader) error {
 
 	// read the id
 	id, err := r.ReadSlice('\n')
@@ -21,7 +22,10 @@ func (m *Register) FromReader(r *bufio.Reader) error {
 		return err
 	}
 
-	m.Id = string(id)
+	// trim the /n
+	id = id[:len(id)-1]
+
+	reg.Id = string(id)
 
 	// read routes
 	routes, err := r.ReadSlice('\n')
@@ -30,19 +34,33 @@ func (m *Register) FromReader(r *bufio.Reader) error {
 		return err
 	}
 
-	m.Routes = strings.Split(string(routes), ",")
+	// trim the /n
+	routes = routes[:len(routes)-1]
+
+	reg.Routes = strings.Split(string(routes), ",")
 
 	// read dop
-	bSize := make([]byte, 2)
+	bSize := make([]byte, 4+1)
 	_, err = r.Read(bSize)
 
 	if err != nil {
 		return err
 	}
 
-	size := binary.BigEndian.Uint64(bSize)
+	size := binary.BigEndian.Uint32(bSize[:4])
 
-	m.Dop = int(size)
+	reg.Dop = int(size)
 
 	return nil
+}
+
+func (reg *Register) Write(w io.Writer) error {
+	err := WriteStr(w, "SUB", reg.Id, strings.Join(reg.Routes, ","))
+
+	if err != nil {
+		return err
+	}
+
+	return WriteUInt32(w, uint32(reg.Dop))
+
 }

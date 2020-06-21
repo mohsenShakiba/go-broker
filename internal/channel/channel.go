@@ -48,6 +48,10 @@ func NewChannel(route string, opt ChannelOptions) *Channel {
 		opt:         opt,
 		subscribers: make([]*subscriber.Subscriber, 0),
 		msgQueue:    queue.New(),
+		messageMap:  make(map[string]*subscriber.Subscriber),
+		sIndex:      0,
+		storage:     nil,
+		lock:        sync.RWMutex{},
 	}
 }
 
@@ -68,6 +72,7 @@ func (c *Channel) processMessages() {
 		// check if any subscriber is available
 		if len(c.subscribers) <= 0 {
 			time.Sleep(time.Second)
+			continue
 		}
 
 		// lock
@@ -82,6 +87,11 @@ func (c *Channel) processMessages() {
 
 		// find the next available subscriber
 		subscriber := c.subscribers[c.sIndex]
+
+		// add subscriber to message map
+		c.lock.Lock()
+		c.messageMap[msg.Id] = subscriber
+		c.lock.Unlock()
 
 		// send message
 		subscriber.OnMessage(msg)

@@ -6,7 +6,10 @@ import (
 )
 
 func Parse(r *bufio.Reader) (interface{}, error) {
-	t, err := r.ReadSlice('\n')
+	t1, err := r.ReadSlice('\n')
+
+	// trim the /n
+	t := t1[:len(t1)-1]
 
 	if err != nil {
 		return nil, err

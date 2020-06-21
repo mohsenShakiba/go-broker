@@ -1,22 +1,20 @@
 package manager
 
 import (
-	log "github.com/sirupsen/logrus"
 	"go-broker/internal/channel"
 	"go-broker/internal/models"
-	"go-broker/internal/storage"
 	"go-broker/internal/subscriber"
 	"go-broker/internal/tcp"
+	"log"
 	"path"
 	"sync"
 )
 
 type Manager struct {
 	socketServer *tcp.Server
-	router       *Router
 	msgMap       map[string]*channel.Channel
 	chanMap      map[string]*channel.Channel
-	lock         sync.Mutex
+	lock         sync.RWMutex
 	conf         Config
 }
 
@@ -36,13 +34,10 @@ func InitManager(conf Config) (*Manager, error) {
 	// start socket server
 	socketServer.Start()
 
-	// init router
-	router := NewRouter()
-
 	// create manager
 	mgr := &Manager{
+		conf:         conf,
 		socketServer: socketServer,
-		router:       router,
 		msgMap:       make(map[string]*channel.Channel),
 		chanMap:      make(map[string]*channel.Channel),
 	}
@@ -69,31 +64,10 @@ func (m *Manager) process(ch chan *tcp.Context) {
 		}
 	}
 
-	log.Infof("processing message with id %s", p.Id)
-
-	subscribers := m.router.Match(p.Routes)
-
-	msgB, err := p.ToBinary()
-
-	if err != nil {
-		log.Errorf("failed to serialize message, error: %s", err)
-	}
-
-	err = m.storage.Write(models.getStringHash(p.Id), msgB)
-
-	if err != nil {
-		log.Errorf("failed to persist message, error: %s", err)
-	}
-
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	for _, s := range subscribers {
-		s.OnMessage(p)
-		m.messageMapping[p.Id] = s
-	}
 }
 
 func (m *Manager) processMessage(client *tcp.Client, msg *models.Message) {
+
 	// check if channel exits
 	ch, ok := m.chanMap[msg.Route]
 
@@ -107,11 +81,20 @@ func (m *Manager) processMessage(client *tcp.Client, msg *models.Message) {
 			StorageType: m.conf.StorageType,
 		})
 
-		m.chanMap[msg.Route] = ch
+		err := ch.Init()
+
+		if err != nil {
+			log.Fatalf("failed to initialize channel, error: %s", err)
+			return
+		}
+
 	}
 
 	// add to mapping
-	m.msgMap[msg.Id] = msg.Route
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.msgMap[msg.Id] = ch
+	m.chanMap[msg.Route] = ch
 
 	// enqueue message
 	ch.Enqueue(msg)
@@ -121,52 +104,82 @@ func (m *Manager) processMessage(client *tcp.Client, msg *models.Message) {
 func (m *Manager) processAck(client *tcp.Client, ack *models.Ack) {
 
 	// check if channel exits
-	ch, ok := m.chanMap[ack.Id]
+	m.lock.RLock()
+	ch, ok := m.msgMap[ack.Id]
+	m.lock.RUnlock()
 
-	// create a new channel
+	// return error
 	if !ok {
-	}
-
-	// enqueue message
-	ch.Enqueue(msg)
-}
-
-func (m *Manager) processNack(msgId string) {
-	m.lock.Lock()
-	s, ok := m.messageMapping[msgId]
-	m.lock.Unlock()
-
-	err := m.storage.Delete(models.getStringHash(msgId))
-
-	if err != nil {
-		log.Errorf("failed to persist ack, error: %s", err)
-	}
-
-	log.Infof("processing ack for msgId: %s", msgId)
-
-	if !ok {
+		client.SendError(ack.Id, "invalid route")
 		return
 	}
 
-	s.OnAck(msgId)
+	// send ack
+	ch.Ack(ack)
 }
 
-func (m *Manager) processSubscribe(msgId string) {
-	m.lock.Lock()
-	s, ok := m.messageMapping[msgId]
-	m.lock.Unlock()
+func (m *Manager) processNack(client *tcp.Client, nack *models.Nack) {
 
-	err := m.storage.Delete(models.getStringHash(msgId))
+	// check if channel exits
+	m.lock.RLock()
+	ch, ok := m.chanMap[nack.Id]
+	m.lock.RUnlock()
 
-	if err != nil {
-		log.Errorf("failed to persist ack, error: %s", err)
-	}
-
-	log.Infof("processing ack for msgId: %s", msgId)
-
+	// return error
 	if !ok {
+		client.SendError(nack.Id, "invalid route")
 		return
 	}
 
-	s.OnAck(msgId)
+	// send ack
+	ch.Nack(nack)
+}
+
+func (m *Manager) processSubscribe(client *tcp.Client, reg *models.Register) {
+
+	// subscriber config
+	conf := subscriber.Config{
+		Dop:    reg.Dop,
+		Routes: reg.Routes,
+	}
+
+	// create a new subscription
+	sub := subscriber.NewSubscriber(client, conf)
+
+	// create channels if not exists
+	// add subscriber to channel
+	for _, route := range reg.Routes {
+
+		m.lock.RLock()
+		ch, ok := m.chanMap[route]
+		m.lock.RUnlock()
+
+		if !ok {
+			fPath := path.Join(m.conf.FilePath, route)
+
+			opt := channel.ChannelOptions{
+				FilePath:    fPath,
+				StorageType: m.conf.StorageType,
+			}
+
+			ch = channel.NewChannel(route, opt)
+
+			err := ch.Init()
+
+			if err != nil {
+				log.Fatalf("failed to initialize channel, error: %s", err)
+				return
+			}
+
+			m.lock.Lock()
+			m.chanMap[route] = ch
+			m.lock.Unlock()
+		}
+
+		ch.Register(sub)
+	}
+
+	// send ack
+	client.SendAck(reg.Id)
+
 }

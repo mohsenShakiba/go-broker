@@ -2,6 +2,7 @@ package models
 
 import (
 	"bufio"
+	"io"
 )
 
 type Ack struct {
@@ -17,7 +18,14 @@ func (a *Ack) FromReader(r *bufio.Reader) error {
 		return err
 	}
 
+	// trim the /n
+	id = id[:len(id)-1]
+
 	a.Id = string(id)
 
 	return nil
+}
+
+func (a *Ack) Write(w io.Writer) error {
+	return WriteStr(w, "ACK", a.Id)
 }

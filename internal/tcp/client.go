@@ -3,6 +3,7 @@ package tcp
 import (
 	"bufio"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/models"
 	"io"
 	"net"
@@ -34,6 +35,48 @@ func (c *Client) Read() (interface{}, error) {
 
 func (c *Client) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
+}
+
+func (c *Client) SendError(id string, msg string) {
+	e := models.Err{
+		Id:  id,
+		Err: msg,
+	}
+
+	err := e.Write(c)
+
+	log.Errorf("error: %s", msg)
+
+	if err != nil {
+		log.Errorf("failed to write error to client, err: %s", err)
+	}
+
+}
+
+func (c *Client) SendAck(id string) {
+	ack := models.Ack{
+		Id: id,
+	}
+
+	err := ack.Write(c)
+
+	if err != nil {
+		log.Errorf("failed to write ack to client, err: %s", err)
+	}
+
+}
+
+func (c *Client) SendNack(id string) {
+	ack := models.Nack{
+		Id: id,
+	}
+
+	err := ack.Write(c)
+
+	if err != nil {
+		log.Errorf("failed to write nack to client, err: %s", err)
+	}
+
 }
 
 // Close will close the socket Conn

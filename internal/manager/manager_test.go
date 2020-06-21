@@ -2,13 +2,11 @@ package manager
 
 import (
 	"bufio"
-	log "github.com/sirupsen/logrus"
-	"go-broker/internal/tcp/messages"
+	"go-broker/internal/models"
 	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 )
@@ -26,11 +24,17 @@ func TestFull(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.SetLevel(log.WarnLevel)
+	//log.SetLevel(log.WarnLevel)
 
 	defer os.RemoveAll(dir)
 
-	_, err = InitManager(dir)
+	conf := Config{
+		FilePath:    dir,
+		StorageType: "F",
+		Port:        8080,
+	}
+
+	_, err = InitManager(conf)
 
 	if err != nil {
 		t.Fatalf("error while creating manager, error: %s", err)
@@ -46,7 +50,7 @@ func TestFull(t *testing.T) {
 }
 
 func initPublisher(t *testing.T) {
-	publisherClient, err := net.Dial("tcp", "127.0.0.1:8085")
+	publisherClient, err := net.Dial("tcp", "127.0.0.1:8080")
 
 	if err != nil {
 		t.Fatalf("could not establish client connection")
@@ -61,19 +65,21 @@ func initPublisher(t *testing.T) {
 		}
 	}()
 
-	writer := bufio.NewWriter(publisherClient)
-
 	for {
-		msg := messages.NewMessage("PUB", strconv.Itoa(numberOfSentMessages))
-		msg.WriteStr("routes", "r1")
-		msg.WriteStr("payload", string(numberOfSentMessages))
-		ok := messages.WriteToIO(msg, writer)
+		numberOfSentMessages += 1
 
-		if !ok {
+		msg := models.Message{
+			Id:      strconv.Itoa(numberOfSentMessages),
+			Route:   "t1",
+			Payload: []byte(strconv.Itoa(numberOfSentMessages)),
+		}
+
+		err := msg.Write(publisherClient)
+
+		if err != nil {
 			t.Fatalf("could not write to server")
 		}
 
-		numberOfSentMessages += 1
 		pub_counter += 1
 
 		//time.Sleep(time.Millisecond * 1)
@@ -82,9 +88,9 @@ func initPublisher(t *testing.T) {
 
 func initSubscriber(t *testing.T) {
 
-	subscribeClient, err := net.Dial("tcp", "127.0.0.1:8085")
-	writer := bufio.NewWriter(subscribeClient)
+	subscribeClient, err := net.Dial("tcp", "127.0.0.1:8080")
 	reader := bufio.NewReader(subscribeClient)
+	writer := bufio.NewWriter(subscribeClient)
 
 	if err != nil {
 		t.Fatalf("could not establish client connection")
@@ -92,15 +98,19 @@ func initSubscriber(t *testing.T) {
 
 	// send subscription message
 
-	subMsg := messages.NewMessage("SUB", "-")
-	subMsg.WriteStr("routes", "r1")
-	subMsg.WriteStr("dop", "100000")
-
-	ok := messages.WriteToIO(subMsg, writer)
-
-	if !ok {
-		t.Fatalf("could not write to server")
+	subMsg := &models.Register{
+		Id:     "0",
+		Dop:    99,
+		Routes: []string{"t1"},
 	}
+
+	err = subMsg.Write(writer)
+
+	if err != nil {
+		t.Fatalf("failed to write message to server, err: %s", err)
+	}
+
+	writer.Flush()
 
 	ticker := time.NewTicker(time.Second)
 	go func() {
@@ -113,40 +123,52 @@ func initSubscriber(t *testing.T) {
 
 	go func() {
 
-		// read the subscription result
-		subResMsg, ok := messages.ReadFromIO(reader)
+		// read the subscription ack
+		subAck := models.Ack{}
 
-		if !ok {
-			t.Fatalf("could not read from server")
+		msgtype, _ := reader.ReadSlice('\n')
+
+		if string(msgtype[:3]) != "ACK" {
+			t.Fatalf("message type is invalid, error: %s", string(msgtype[:3]))
 		}
 
-		if subResMsg.Type != "ACK" {
-			t.Fatalf("the message type must be ack")
+		err := subAck.FromReader(reader)
+
+		if err != nil {
+			t.Fatalf("failed to read subscription ack, error: %s", err)
 		}
 
-		var l sync.Mutex
+		if subAck.Id != "0" {
+			t.Fatalf("the message id doesn't match")
+		}
 
 		for {
-			publishedMsg, ok := messages.ReadFromIO(reader)
+			msg := models.Message{}
 
-			if !ok {
-				t.Fatalf("could not read from server")
+			msgtype, _ := reader.ReadSlice('\n')
+
+			if string(msgtype[:3]) != "PUB" {
+				t.Fatalf("message type is invalid, error: %s", string(msgtype[:3]))
 			}
 
-			msgId := publishedMsg.MsgId
-			go func() {
-				time.Sleep(time.Second)
-				l.Lock()
-				defer l.Unlock()
-				ackMsg := messages.NewMessage("ACK", msgId)
-				ok = messages.WriteToIO(ackMsg, writer)
+			err = msg.FromReader(reader)
 
-				if !ok {
-					t.Fatalf("failed to write ack message")
-				}
+			if err != nil {
+				t.Fatalf("failed to read payload msg, error: %s", err)
+			}
 
-				counter += 1
-			}()
+			ackMsg := models.Ack{
+				Id: msg.Id,
+			}
+
+			err = ackMsg.Write(writer)
+
+			writer.Flush()
+			if err != nil {
+				t.Fatalf("failed to send ack messgae")
+			}
+
+			counter += 1
 
 		}
 	}()

@@ -7,22 +7,22 @@ import (
 	"go-broker/internal/tcp"
 )
 
-type subscriberConfig struct {
-	parallelism int
-	routes      []string
+type Config struct {
+	Dop    int
+	Routes []string
 }
 
-func NewSubscriber(c *tcp.Client, config subscriberConfig) *Subscriber {
+func NewSubscriber(c *tcp.Client, config Config) *Subscriber {
 	return &Subscriber{
 		client:      c,
 		config:      config,
-		rController: rate_controller.New(config.parallelism),
+		rController: rate_controller.New(config.Dop),
 	}
 }
 
 type Subscriber struct {
 	client      *tcp.Client
-	config      subscriberConfig
+	config      Config
 	rController rate_controller.RateController
 }
 
