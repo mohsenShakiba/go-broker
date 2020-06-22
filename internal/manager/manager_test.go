@@ -2,12 +2,13 @@ package manager
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
 	"go-broker/internal/models"
 	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 )
@@ -50,6 +51,33 @@ func TestFull(t *testing.T) {
 	time.Sleep(time.Second * 100000)
 }
 
+func testFakePublisher() {
+	publisherClient, _ := net.Dial("tcp", "127.0.0.1:8080")
+
+	msg := models.Message{
+		Id:      strconv.Itoa(numberOfSentMessages),
+		Route:   "t1",
+		Payload: []byte(strconv.Itoa(numberOfSentMessages)),
+	}
+
+	//msg1 := "FAKE\nabc\ntes\n"
+
+	b := &bytes.Buffer{}
+
+	msg.Write(b)
+
+	fmt.Printf("msg is %s \n", string(b.Bytes()))
+
+	start := time.Now()
+	for i := 0; i < 1000000; i++ {
+		if i%1000 == 0 {
+			fmt.Println("took:", time.Since(start))
+			start = time.Now()
+		}
+		publisherClient.Write(b.Bytes())
+	}
+}
+
 func initPublisher(t *testing.T) {
 	publisherClient, err := net.Dial("tcp", "127.0.0.1:8080")
 
@@ -75,7 +103,11 @@ func initPublisher(t *testing.T) {
 			Payload: []byte(strconv.Itoa(numberOfSentMessages)),
 		}
 
-		err := msg.Write(publisherClient)
+		b := &bytes.Buffer{}
+
+		err := msg.Write(b)
+
+		publisherClient.Write(b.Bytes())
 
 		if err != nil {
 			t.Fatalf("could not write to server")
@@ -90,7 +122,9 @@ func initPublisher(t *testing.T) {
 func initSubscriber(t *testing.T) {
 
 	subscribeClient, err := net.Dial("tcp", "127.0.0.1:8080")
+
 	reader := bufio.NewReader(subscribeClient)
+	//writer := bufio.NewWriter(subscribeClient)
 
 	if err != nil {
 		t.Fatalf("could not establish client connection")
@@ -100,7 +134,7 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := &models.Register{
 		Id:     "0",
-		Dop:    9999,
+		Dop:    99,
 		Routes: []string{"t1"},
 	}
 
@@ -140,7 +174,7 @@ func initSubscriber(t *testing.T) {
 			t.Fatalf("the message id doesn't match")
 		}
 
-		var l sync.Mutex
+		//var l sync.Mutex
 
 		for {
 			msg := models.Message{}
@@ -157,21 +191,21 @@ func initSubscriber(t *testing.T) {
 				t.Fatalf("failed to read payload msg, error: %s", err)
 			}
 
-			go func() {
-				ackMsg := models.Ack{
-					Id: msg.Id,
-				}
+			//go func() {
+			ackMsg := models.Ack{
+				Id: msg.Id,
+			}
 
-				l.Lock()
-				err = ackMsg.Write(subscribeClient)
-				l.Unlock()
+			//l.Lock()
+			err = ackMsg.Write(subscribeClient)
+			counter += 1
+			//l.Unlock()
 
-				if err != nil {
-					t.Fatalf("failed to send ack messgae")
-				}
+			if err != nil {
+				t.Fatalf("failed to send ack messgae")
+			}
 
-				counter += 1
-			}()
+			//}()
 
 		}
 	}()

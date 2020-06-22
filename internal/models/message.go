@@ -42,7 +42,7 @@ func (m *Message) FromReader(r *bufio.Reader) error {
 
 	// read payload size
 	bSize := make([]byte, 8)
-	_, err = r.Read(bSize)
+	_, err = io.ReadFull(r, bSize)
 
 	if err != nil {
 		return err

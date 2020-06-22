@@ -38,13 +38,9 @@ func (c *Client) Read() (interface{}, error) {
 // BeginWrite will only allow one write at any time
 // this is required to prevent multiple write
 func (c *Client) BeginWrite(fn func(w io.Writer)) {
-	//fn(c.conn)
 	c.wLock.Lock()
-	fn(c.Writer)
-	c.Writer.Flush()
-	//c.conn.Write(buf.Bytes())
-	c.wLock.Unlock()
-
+	defer c.wLock.Unlock()
+	fn(c.conn)
 }
 
 func (c *Client) SendError(id string, msg string) {

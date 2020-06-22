@@ -1,11 +1,11 @@
 package manager
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go-broker/internal/channel"
 	"go-broker/internal/models"
 	"go-broker/internal/subscriber"
 	"go-broker/internal/tcp"
-	"log"
 	"path"
 	"sync"
 )
@@ -60,6 +60,8 @@ func (m *Manager) process(ch chan *tcp.Context) {
 		case *models.Nack:
 			m.processNack(ctx.Client, msg)
 		case *models.Register:
+			m.processSubscribe(ctx.Client, msg)
+		case *models.Ping:
 			m.processSubscribe(ctx.Client, msg)
 		}
 	}
@@ -179,7 +181,13 @@ func (m *Manager) processSubscribe(client *tcp.Client, reg *models.Register) {
 		ch.Register(sub)
 	}
 
+	log.Infof("added new subscriber with id: %s", client.ClientId)
+
 	// send ack
 	client.SendAck(reg.Id)
 
+}
+
+func (m *Manager) processPing(client *tcp.Client, p *models.Ping) {
+	client.SendAck(p.Id)
 }

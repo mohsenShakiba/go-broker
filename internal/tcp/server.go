@@ -76,6 +76,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 
 		if err != nil {
+			log.Errorf("invalid message from client error: %s, client id: %s", err, client.ClientId)
 			continue
 		}
 
