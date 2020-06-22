@@ -7,6 +7,7 @@ import (
 	"go-broker/internal/models"
 	"io"
 	"net"
+	"sync"
 )
 
 // subscriber is in charge of reading the data from the conn
@@ -16,6 +17,7 @@ type Client struct {
 	Reader   *bufio.Reader
 	Writer   *bufio.Writer
 	conn     io.ReadWriteCloser
+	wLock    sync.Mutex
 }
 
 // initSocketClient will create a new socket client
@@ -33,8 +35,16 @@ func (c *Client) Read() (interface{}, error) {
 	return models.Parse(c.Reader)
 }
 
-func (c *Client) Write(b []byte) (int, error) {
-	return c.conn.Write(b)
+// BeginWrite will only allow one write at any time
+// this is required to prevent multiple write
+func (c *Client) BeginWrite(fn func(w io.Writer)) {
+	//fn(c.conn)
+	c.wLock.Lock()
+	fn(c.Writer)
+	c.Writer.Flush()
+	//c.conn.Write(buf.Bytes())
+	c.wLock.Unlock()
+
 }
 
 func (c *Client) SendError(id string, msg string) {
@@ -43,13 +53,12 @@ func (c *Client) SendError(id string, msg string) {
 		Err: msg,
 	}
 
-	err := e.Write(c)
-
-	log.Errorf("error: %s", msg)
-
-	if err != nil {
-		log.Errorf("failed to write error to client, err: %s", err)
-	}
+	c.BeginWrite(func(w io.Writer) {
+		err := e.Write(w)
+		if err != nil {
+			log.Errorf("failed to write error to client, err: %s", err)
+		}
+	})
 
 }
 
@@ -58,23 +67,25 @@ func (c *Client) SendAck(id string) {
 		Id: id,
 	}
 
-	err := ack.Write(c)
-
-	if err != nil {
-		log.Errorf("failed to write ack to client, err: %s", err)
-	}
+	c.BeginWrite(func(w io.Writer) {
+		err := ack.Write(w)
+		if err != nil {
+			log.Errorf("failed to write ack to client, err: %s", err)
+		}
+	})
 }
 
 func (c *Client) SendNack(id string) {
-	ack := models.Nack{
+	nack := models.Nack{
 		Id: id,
 	}
 
-	err := ack.Write(c)
-
-	if err != nil {
-		log.Errorf("failed to write nack to client, err: %s", err)
-	}
+	c.BeginWrite(func(w io.Writer) {
+		err := nack.Write(w)
+		if err != nil {
+			log.Errorf("failed to write nack to client, err: %s", err)
+		}
+	})
 
 }
 

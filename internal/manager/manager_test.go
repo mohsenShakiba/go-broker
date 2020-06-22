@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -90,7 +91,6 @@ func initSubscriber(t *testing.T) {
 
 	subscribeClient, err := net.Dial("tcp", "127.0.0.1:8080")
 	reader := bufio.NewReader(subscribeClient)
-	writer := bufio.NewWriter(subscribeClient)
 
 	if err != nil {
 		t.Fatalf("could not establish client connection")
@@ -100,17 +100,15 @@ func initSubscriber(t *testing.T) {
 
 	subMsg := &models.Register{
 		Id:     "0",
-		Dop:    99,
+		Dop:    9999,
 		Routes: []string{"t1"},
 	}
 
-	err = subMsg.Write(writer)
+	err = subMsg.Write(subscribeClient)
 
 	if err != nil {
 		t.Fatalf("failed to write message to server, err: %s", err)
 	}
-
-	writer.Flush()
 
 	ticker := time.NewTicker(time.Second)
 	go func() {
@@ -142,6 +140,8 @@ func initSubscriber(t *testing.T) {
 			t.Fatalf("the message id doesn't match")
 		}
 
+		var l sync.Mutex
+
 		for {
 			msg := models.Message{}
 
@@ -157,18 +157,21 @@ func initSubscriber(t *testing.T) {
 				t.Fatalf("failed to read payload msg, error: %s", err)
 			}
 
-			ackMsg := models.Ack{
-				Id: msg.Id,
-			}
+			go func() {
+				ackMsg := models.Ack{
+					Id: msg.Id,
+				}
 
-			err = ackMsg.Write(writer)
+				l.Lock()
+				err = ackMsg.Write(subscribeClient)
+				l.Unlock()
 
-			writer.Flush()
-			if err != nil {
-				t.Fatalf("failed to send ack messgae")
-			}
+				if err != nil {
+					t.Fatalf("failed to send ack messgae")
+				}
 
-			counter += 1
+				counter += 1
+			}()
 
 		}
 	}()

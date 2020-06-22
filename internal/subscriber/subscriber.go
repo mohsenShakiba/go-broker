@@ -5,6 +5,7 @@ import (
 	"go-broker/internal/internal/rate_controller"
 	"go-broker/internal/models"
 	"go-broker/internal/tcp"
+	"io"
 )
 
 type Config struct {
@@ -36,8 +37,10 @@ func (s *Subscriber) OnNack(msgId string) {
 
 func (s *Subscriber) OnMessage(msg *models.Message) {
 	s.rController.WaitOne(msg.Id)
-	err := msg.Write(s.client)
-	if err != nil {
-		log.Errorf("failed to write the message, error: %s", err)
-	}
+	s.client.BeginWrite(func(w io.Writer) {
+		err := msg.Write(w)
+		if err != nil {
+			log.Errorf("failed to write the message, error: %s", err)
+		}
+	})
 }
