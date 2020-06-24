@@ -7,6 +7,7 @@ import (
 )
 
 func Parse(r *bufio.Reader) (interface{}, error) {
+
 	t1, err := r.ReadSlice('\n')
 
 	if len(t1) < 3 {
@@ -37,10 +38,10 @@ func Parse(r *bufio.Reader) (interface{}, error) {
 		m := &Nack{}
 		err := m.FromReader(r)
 		return m, err
-	case "FAKE":
-		f := &Ping{}
-		err := f.FromReader(r)
-		return f, err
+	case "PING":
+		p := &Ping{}
+		err := p.FromReader(r)
+		return p, err
 	}
 
 	return nil, errors.New(fmt.Sprintf("invalid type: %s", string(t1)))

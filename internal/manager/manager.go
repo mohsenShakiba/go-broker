@@ -62,7 +62,7 @@ func (m *Manager) process(ch chan *tcp.Context) {
 		case *models.Register:
 			m.processSubscribe(ctx.Client, msg)
 		case *models.Ping:
-			m.processSubscribe(ctx.Client, msg)
+			m.processPing(ctx.Client, msg)
 		}
 	}
 
@@ -100,6 +100,9 @@ func (m *Manager) processMessage(client *tcp.Client, msg *models.Message) {
 
 	// enqueue message
 	ch.Enqueue(msg)
+
+	// send message ack
+	client.SendAck(msg.Id)
 
 }
 

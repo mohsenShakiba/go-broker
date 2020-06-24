@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/binary"
+	"go-broker/internal/storage/file"
 	"io"
 	"os"
 	"sync"
@@ -15,7 +16,7 @@ type fileStorage struct {
 	// lock for making sure the offset, map and file handler is accessed by only one goroutine
 	l sync.RWMutex
 	// map containing the file entries in the memory
-	m map[string]*entry
+	m map[string]*file.entry
 	// offset in the file for writing new entries
 	fhOffset int64
 	// offset of actual rows that are not deleted
@@ -25,7 +26,7 @@ type fileStorage struct {
 func NewFileStore(path string) Storage {
 	return &fileStorage{
 		path: path,
-		m:    make(map[string]*entry),
+		m:    make(map[string]*file.entry),
 	}
 }
 
@@ -45,7 +46,7 @@ func (fs *fileStorage) Init() error {
 
 	fs.fh = fh
 
-	entryByteArr := make([]byte, entryHeaderLength)
+	entryByteArr := make([]byte, file.entryHeaderLength)
 
 	for {
 		_, err := fh.ReadAt(entryByteArr, fs.fhOffset)
@@ -58,14 +59,14 @@ func (fs *fileStorage) Init() error {
 			return err
 		}
 
-		entry := fromBinary(entryByteArr)
+		entry := file.fromBinary(entryByteArr)
 
 		entry.offset = fs.fhOffset
-		fs.fhOffset += entryHeaderLength + entry.length
+		fs.fhOffset += file.entryHeaderLength + entry.length
 
 		if entry.deleted == 0 {
 			fs.m[entry.id] = entry
-			fs.fhTrueOffset += entryHeaderLength + entry.length
+			fs.fhTrueOffset += file.entryHeaderLength + entry.length
 		}
 	}
 
@@ -106,7 +107,7 @@ func (fs *fileStorage) Write(key string, payload []byte) error {
 	fs.l.Lock()
 	defer fs.l.Unlock()
 
-	e := &entry{
+	e := &file.entry{
 		deleted: 0,
 		id:      key,
 		length:  int64(len(payload)),
@@ -115,7 +116,7 @@ func (fs *fileStorage) Write(key string, payload []byte) error {
 
 	fs.m[key] = e
 
-	b := toBinary(e)
+	b := file.toBinary(e)
 
 	_, err := fs.fh.WriteAt(b, fs.fhOffset)
 
@@ -123,7 +124,7 @@ func (fs *fileStorage) Write(key string, payload []byte) error {
 		return err
 	}
 
-	_, err = fs.fh.WriteAt(payload, fs.fhOffset+entryHeaderLength)
+	_, err = fs.fh.WriteAt(payload, fs.fhOffset+file.entryHeaderLength)
 
 	if err != nil {
 		return err
@@ -152,7 +153,7 @@ func (fs *fileStorage) Delete(key string) error {
 
 	_, err := fs.fh.WriteAt(b, e.offset)
 
-	fs.fhTrueOffset -= e.length + entryHeaderLength
+	fs.fhTrueOffset -= e.length + file.entryHeaderLength
 
 	return err
 }
@@ -161,4 +162,10 @@ func (fs *fileStorage) Close() {
 	fs.l.Lock()
 	defer fs.l.Unlock()
 	fs.fh.Close()
+}
+
+// this method will check if fhOffset is twice as fhTrueOffset
+// in which case a new file is created and all the existing data will move to the new file
+func (fs *fileStorage) checkForDefragmentation() {
+
 }

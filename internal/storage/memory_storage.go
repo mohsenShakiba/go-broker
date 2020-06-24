@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"go-broker/internal/storage/file"
 	"sync"
 )
 
@@ -8,14 +9,14 @@ type memoryStorage struct {
 	// lock
 	l sync.RWMutex
 	// entry map
-	m map[string]*entry
+	m map[string]*file.entry
 	// payload map
 	mp map[string][]byte
 }
 
 func NewMemoryStore() Storage {
 	return &memoryStorage{
-		m:  make(map[string]*entry),
+		m:  make(map[string]*file.entry),
 		mp: make(map[string][]byte),
 	}
 }
@@ -37,7 +38,7 @@ func (ms *memoryStorage) Keys() ([]string, error) {
 func (ms *memoryStorage) Write(key string, payload []byte) error {
 	ms.l.Lock()
 	defer ms.l.Unlock()
-	e := &entry{
+	e := &file.entry{
 		deleted: 0,
 		id:      key,
 		length:  int64(len(payload)),

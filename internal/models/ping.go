@@ -1,12 +1,15 @@
 package models
 
-import "bufio"
+import (
+	"bufio"
+	"io"
+)
 
 type Ping struct {
 	Id string
 }
 
-func (f *Ping) FromReader(r *bufio.Reader) error {
+func (p *Ping) FromReader(r *bufio.Reader) error {
 
 	// read the id
 	id, err := r.ReadSlice('\n')
@@ -18,7 +21,11 @@ func (f *Ping) FromReader(r *bufio.Reader) error {
 	// trim the /n
 	id = id[:len(id)-1]
 
-	f.Id = string(id)
+	p.Id = string(id)
 
 	return nil
+}
+
+func (p *Ping) Write(w io.Writer) error {
+	return WriteStr(w, "PING", p.Id)
 }
