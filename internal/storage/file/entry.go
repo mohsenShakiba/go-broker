@@ -9,6 +9,7 @@ const (
 	entryHeaderLength = 32 + 10
 )
 
+// entry contains the information about a key value pair
 type entry struct {
 	deleted uint16
 	id      string
@@ -16,6 +17,7 @@ type entry struct {
 	length  int64
 }
 
+// to binary will create a byte array containing the entry data
 func toBinary(e *entry) []byte {
 	b := make([]byte, entryHeaderLength)
 	binary.LittleEndian.PutUint16(b[:2], e.deleted)
@@ -24,6 +26,7 @@ func toBinary(e *entry) []byte {
 	return b
 }
 
+// from binary will convert a byte array to entry
 func fromBinary(b []byte) *entry {
 	return &entry{
 		deleted: binary.LittleEndian.Uint16(b[:2]),

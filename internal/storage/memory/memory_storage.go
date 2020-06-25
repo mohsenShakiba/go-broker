@@ -1,22 +1,19 @@
-package storage
+package memory
 
 import (
-	"go-broker/internal/storage/file"
+	"go-broker/internal/storage"
 	"sync"
 )
 
 type memoryStorage struct {
 	// lock
 	l sync.RWMutex
-	// entry map
-	m map[string]*file.entry
 	// payload map
 	mp map[string][]byte
 }
 
-func NewMemoryStore() Storage {
+func NewMemoryStore() storage.Storage {
 	return &memoryStorage{
-		m:  make(map[string]*file.entry),
 		mp: make(map[string][]byte),
 	}
 }
@@ -28,8 +25,8 @@ func (ms *memoryStorage) Init() error {
 func (ms *memoryStorage) Keys() ([]string, error) {
 	ms.l.Lock()
 	defer ms.l.Unlock()
-	keys := make([]string, 0, len(ms.m))
-	for id := range ms.m {
+	keys := make([]string, 0, len(ms.mp))
+	for id := range ms.mp {
 		keys = append(keys, id)
 	}
 	return keys, nil
@@ -38,15 +35,7 @@ func (ms *memoryStorage) Keys() ([]string, error) {
 func (ms *memoryStorage) Write(key string, payload []byte) error {
 	ms.l.Lock()
 	defer ms.l.Unlock()
-	e := &file.entry{
-		deleted: 0,
-		id:      key,
-		length:  int64(len(payload)),
-	}
-
-	ms.m[key] = e
 	ms.mp[key] = payload
-
 	return nil
 }
 
@@ -57,7 +46,7 @@ func (ms *memoryStorage) Read(key string) ([]byte, error) {
 	b, ok := ms.mp[key]
 
 	if !ok {
-		return nil, NotFoundError
+		return nil, storage.NotFoundError
 	}
 
 	return b, nil
@@ -66,10 +55,7 @@ func (ms *memoryStorage) Read(key string) ([]byte, error) {
 func (ms *memoryStorage) Delete(key string) error {
 	ms.l.Lock()
 	defer ms.l.Unlock()
-
-	delete(ms.m, key)
 	delete(ms.mp, key)
-
 	return nil
 }
 

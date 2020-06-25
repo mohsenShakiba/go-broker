@@ -163,9 +163,3 @@ func (fs *fileStorage) Close() {
 	defer fs.l.Unlock()
 	fs.fh.Close()
 }
-
-// this method will check if fhOffset is twice as fhTrueOffset
-// in which case a new file is created and all the existing data will move to the new file
-func (fs *fileStorage) checkForDefragmentation() {
-
-}

@@ -198,7 +198,15 @@ func (df *dataFile) delete(key string) error {
 	// change 0 to 1 indicating that the entry has been deleted
 	_, err := df.f.WriteAt(b, e.offset)
 
-	if err != nil {
-		return err
-	}
+	return err
+}
+
+func (df *dataFile) containsKey(key string) bool {
+	df.lock.RLock()
+	defer df.lock.RUnlock()
+
+	// find the entry
+	_, ok := df.entryMap[key]
+
+	return ok
 }

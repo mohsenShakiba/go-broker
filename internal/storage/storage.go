@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"go-broker/internal/storage/memory"
 )
 
 // Storage represent a file which contains key values for a specific channel
@@ -28,7 +29,7 @@ func NewStorage(path string, t string) Storage {
 	case File:
 		return NewFileStore(path)
 	case Memory:
-		return NewMemoryStore()
+		return memory.NewMemoryStore()
 	case BoltDb:
 		return NewBoltDbStorage(path)
 	}

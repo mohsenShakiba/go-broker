@@ -32,7 +32,7 @@ func TestFull(t *testing.T) {
 
 	conf := Config{
 		FilePath:    dir,
-		StorageType: "F",
+		StorageType: "B",
 		Port:        8080,
 	}
 
