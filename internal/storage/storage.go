@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
+	"go-broker/internal/storage/file"
 	"go-broker/internal/storage/memory"
 )
 
@@ -16,23 +16,24 @@ type Storage interface {
 	Close()
 }
 
-var NotFoundError = errors.New("NOT_FOUND")
+type StorageConfig struct {
+	Path        string
+	Type        string
+	MaxFileSize int64
+}
 
 const (
 	File   = "F"
 	Memory = "M"
-	BoltDb = "B"
 )
 
-func NewStorage(path string, t string) Storage {
-	switch t {
+func NewStorage(conf StorageConfig) Storage {
+	switch conf.Type {
 	case File:
-		return NewFileStore(path)
+		return file.NewFileStorage(conf.Path, conf.MaxFileSize)
 	case Memory:
-		return memory.NewMemoryStore()
-	case BoltDb:
-		return NewBoltDbStorage(path)
+		return memory.NewMemoryStorage()
 	}
-	msg := fmt.Sprintf("Invalid storage type %s", t)
+	msg := fmt.Sprintf("Invalid storage type %s", conf.Type)
 	panic(msg)
 }

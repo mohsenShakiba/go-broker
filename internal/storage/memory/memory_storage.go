@@ -12,7 +12,7 @@ type memoryStorage struct {
 	mp map[string][]byte
 }
 
-func NewMemoryStore() storage.Storage {
+func NewMemoryStorage() storage.Storage {
 	return &memoryStorage{
 		mp: make(map[string][]byte),
 	}
