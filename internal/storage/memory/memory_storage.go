@@ -1,7 +1,7 @@
 package memory
 
 import (
-	"go-broker/internal/storage"
+	"errors"
 	"sync"
 )
 
@@ -12,7 +12,7 @@ type memoryStorage struct {
 	mp map[string][]byte
 }
 
-func NewMemoryStorage() storage.Storage {
+func NewMemoryStorage() *memoryStorage {
 	return &memoryStorage{
 		mp: make(map[string][]byte),
 	}
@@ -46,7 +46,7 @@ func (ms *memoryStorage) Read(key string) ([]byte, error) {
 	b, ok := ms.mp[key]
 
 	if !ok {
-		return nil, storage.NotFoundError
+		return nil, errors.New("KeyNotFound")
 	}
 
 	return b, nil

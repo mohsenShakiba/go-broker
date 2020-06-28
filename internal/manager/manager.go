@@ -6,7 +6,6 @@ import (
 	"go-broker/internal/models"
 	"go-broker/internal/subscriber"
 	"go-broker/internal/tcp"
-	"path"
 	"sync"
 )
 
@@ -76,12 +75,7 @@ func (m *Manager) processMessage(client *tcp.Client, msg *models.Message) {
 	// create a new channel
 	if !ok {
 
-		fPath := path.Join(m.conf.FilePath, msg.Route)
-
-		ch = channel.NewChannel(msg.Route, channel.ChannelOptions{
-			FilePath:    fPath,
-			StorageType: m.conf.StorageType,
-		})
+		ch = channel.NewChannel(msg.Route, m.conf.StorageConfig)
 
 		err := ch.Init()
 
@@ -160,14 +154,8 @@ func (m *Manager) processSubscribe(client *tcp.Client, reg *models.Register) {
 		m.lock.RUnlock()
 
 		if !ok {
-			fPath := path.Join(m.conf.FilePath, route)
 
-			opt := channel.ChannelOptions{
-				FilePath:    fPath,
-				StorageType: m.conf.StorageType,
-			}
-
-			ch = channel.NewChannel(route, opt)
+			ch = channel.NewChannel(route, m.conf.StorageConfig)
 
 			err := ch.Init()
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-broker/internal/manager"
 	"go-broker/internal/models"
+	"go-broker/internal/storage"
 	"net"
 	"strconv"
 	"sync"
@@ -17,8 +18,10 @@ import (
 func TestPublisherWithMemoryStorage(t *testing.T) {
 
 	conf := manager.Config{
-		StorageType: "M",
-		Port:        8080,
+		StorageConfig: storage.StorageConfig{
+			Type: "M",
+		},
+		Port: 8080,
 	}
 
 	_, err := manager.InitManager(conf)
@@ -50,20 +53,20 @@ func TestPublisherWithMemoryStorage(t *testing.T) {
 
 			id := strconv.Itoa(count)
 
-			ping := models.Message{
+			msg := models.Message{
 				Id:      id,
 				Route:   "r1",
 				Payload: []byte(id),
 			}
 
-			_ = ping.Write(client)
+			_ = msg.Write(client)
 
 			_, _ = clientReader.ReadSlice('\n')
 
 			ack := models.Ack{}
 			_ = ack.FromReader(clientReader)
 
-			if ack.Id != ping.Id {
+			if ack.Id != msg.Id {
 				t.Fatal("the response of publish doesn't match")
 			}
 
@@ -82,9 +85,12 @@ func TestPublisherWithMemoryStorage(t *testing.T) {
 func TestPublisherWithFileStorage(t *testing.T) {
 
 	conf := manager.Config{
-		FilePath:    "../files",
-		StorageType: "F",
-		Port:        8080,
+		StorageConfig: storage.StorageConfig{
+			Path:        "../files",
+			Type:        "F",
+			MaxFileSize: 1024 * 1024 * 1024,
+		},
+		Port: 8080,
 	}
 
 	_, err := manager.InitManager(conf)
@@ -111,27 +117,29 @@ func TestPublisherWithFileStorage(t *testing.T) {
 		}
 	}()
 
+	// writing
 	go func() {
 		for {
 
 			id := strconv.Itoa(count)
 
-			ping := models.Message{
+			msg := models.Message{
 				Id:      id,
 				Route:   "r1",
 				Payload: []byte(id),
 			}
 
-			_ = ping.Write(client)
+			_ = msg.Write(client)
+		}
+	}()
 
+	// reading
+	go func() {
+		for {
 			_, _ = clientReader.ReadSlice('\n')
 
 			ack := models.Ack{}
 			_ = ack.FromReader(clientReader)
-
-			if ack.Id != ping.Id {
-				t.Fatal("the response of publish doesn't match")
-			}
 
 			lock.Lock()
 			count += 1
@@ -139,6 +147,6 @@ func TestPublisherWithFileStorage(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 30)
 
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-broker/internal/manager"
 	"go-broker/internal/models"
+	"go-broker/internal/storage"
 	"net"
 	"sync"
 	"testing"
@@ -18,8 +19,10 @@ import (
 func TestPingServer(t *testing.T) {
 
 	conf := manager.Config{
-		StorageType: "M",
-		Port:        8080,
+		StorageConfig: storage.StorageConfig{
+			Type: "M",
+		},
+		Port: 8080,
 	}
 
 	_, err := manager.InitManager(conf)

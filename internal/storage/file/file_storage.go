@@ -2,7 +2,6 @@ package file
 
 import (
 	"fmt"
-	"go-broker/internal/storage"
 	"io/ioutil"
 	"path"
 	"sync"
@@ -18,7 +17,7 @@ type fileStorage struct {
 	lock           sync.RWMutex
 }
 
-func NewFileStorage(basePath string, maxSize int64) storage.Storage {
+func NewFileStorage(basePath string, maxSize int64) *fileStorage {
 	return &fileStorage{
 		msgMap:         make(map[string]*entry),
 		dataFiles:      make([]*dataFile, 0),
@@ -46,6 +45,7 @@ func (fs *fileStorage) Init() error {
 		// append data file
 		df, err := newDataFile(dfPath)
 		fs.dataFiles = append(fs.dataFiles, df)
+		fs.activeDataFile = df
 
 		if err != nil {
 			return err
@@ -91,9 +91,6 @@ func (fs *fileStorage) Read(key string) ([]byte, error) {
 }
 
 func (fs *fileStorage) Write(key string, payload []byte) error {
-	fs.lock.Lock()
-	defer fs.lock.Unlock()
-
 	// get current dataFile
 	dataFile, err := fs.getActiveDataFile()
 
@@ -108,6 +105,9 @@ func (fs *fileStorage) Write(key string, payload []byte) error {
 		df:      dataFile,
 		offset:  dataFile.offset,
 	}
+
+	fs.lock.Lock()
+	defer fs.lock.Unlock()
 
 	fs.msgMap[key] = e
 
@@ -141,21 +141,23 @@ func (fs *fileStorage) Close() {
 }
 
 func (fs *fileStorage) getActiveDataFile() (*dataFile, error) {
+	if fs.activeDataFile != nil && fs.activeDataFile.offset <= fs.maxFileSize {
+		return fs.activeDataFile, nil
+	}
+
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
 
-	if fs.activeDataFile == nil || fs.activeDataFile.offset >= fs.maxFileSize {
-		dfPath := path.Join(fs.basePath, fmt.Sprintf("%d", time.Now().Unix()))
+	dfPath := path.Join(fs.basePath, fmt.Sprintf("%d", time.Now().Unix()))
 
-		df, err := newDataFile(dfPath)
+	df, err := newDataFile(dfPath)
 
-		if err != nil {
-			return nil, err
-		}
-
-		fs.activeDataFile = df
-		fs.dataFiles = append(fs.dataFiles, df)
+	if err != nil {
+		return nil, err
 	}
+
+	fs.activeDataFile = df
+	fs.dataFiles = append(fs.dataFiles, df)
 
 	return fs.activeDataFile, nil
 }

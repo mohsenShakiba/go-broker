@@ -10,18 +10,13 @@ import (
 	"time"
 )
 
-type ChannelOptions struct {
-	FilePath    string
-	StorageType string
-}
-
 type Channel struct {
 
 	// name of channel
 	name string
 
-	// channel options
-	opt ChannelOptions
+	// storage config
+	storageConfig storage.StorageConfig
 
 	// list of available subscribers
 	subscribers []*subscriber.Subscriber
@@ -37,26 +32,27 @@ type Channel struct {
 	// this field is required for enabling round robin
 	sIndex int
 
+	// storage used for this channel
 	storage storage.Storage
 
 	lock sync.RWMutex
 }
 
-func NewChannel(route string, opt ChannelOptions) *Channel {
+func NewChannel(route string, opt storage.StorageConfig) *Channel {
 	return &Channel{
-		name:        route,
-		opt:         opt,
-		subscribers: make([]*subscriber.Subscriber, 0),
-		msgQueue:    queue.New(),
-		messageMap:  make(map[string]*subscriber.Subscriber),
-		sIndex:      0,
-		storage:     nil,
-		lock:        sync.RWMutex{},
+		name:          route,
+		storageConfig: opt,
+		subscribers:   make([]*subscriber.Subscriber, 0),
+		msgQueue:      queue.New(),
+		messageMap:    make(map[string]*subscriber.Subscriber),
+		sIndex:        0,
+		storage:       nil,
+		lock:          sync.RWMutex{},
 	}
 }
 
 func (c *Channel) Init() error {
-	c.storage = storage.NewStorage(c.opt.FilePath, c.opt.StorageType)
+	c.storage = storage.NewStorage(c.storageConfig)
 	go c.processMessages()
 	return c.storage.Init()
 }

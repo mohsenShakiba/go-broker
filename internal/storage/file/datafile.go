@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 )
 
 var (
@@ -29,6 +30,9 @@ type dataFile struct {
 
 	// lock to prevent multiple access to file handler
 	lock sync.RWMutex
+
+	// ticker to sync data
+	ticker *time.Ticker
 }
 
 // newDataFile will create a new dataFile
@@ -52,7 +56,16 @@ func newDataFile(path string) (*dataFile, error) {
 		path:   path,
 		f:      fh,
 		offset: fileStat.Size(),
+		ticker: time.NewTicker(time.Second),
 	}
+
+	// syncing in-memory changes to disk
+	go func() {
+		for {
+			<-df.ticker.C
+			_ = fh.Sync()
+		}
+	}()
 
 	return df, nil
 }
@@ -113,7 +126,7 @@ func (df *dataFile) append(e *entry, value []byte) error {
 	_, err = df.f.WriteAt(value, df.offset+entryHeaderLength)
 
 	// adjust the offset
-	df.offset += df.offset + entryHeaderLength
+	df.offset += e.length + entryHeaderLength
 
 	// adjust active entries
 	df.remainingActiveEntries += 1

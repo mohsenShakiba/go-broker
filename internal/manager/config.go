@@ -1,7 +1,8 @@
 package manager
 
+import "go-broker/internal/storage"
+
 type Config struct {
-	FilePath    string
-	StorageType string
-	Port        int32
+	Port int32
+	storage.StorageConfig
 }
